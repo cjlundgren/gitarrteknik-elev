@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%23b0502a%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2219%22 font-family=%22Georgia,serif%22 font-weight=%22700%22 text-anchor=%22middle%22 fill=%22white%22%3ET%3C/text%3E%3C/svg%3E">
+<title>Teknikkort</title>
+<!-- allt hämtas från sajten själv (material/lib), inga anrop till andra tjänster -->
+<script src="lib/alphatab/alphaTab.min.js"></script>
+<style>
+@font-face { font-family: "Fraunces"; src: url("lib/fonts/fraunces.woff2") format("woff2"); font-weight: 500 700; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("lib/fonts/inter.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+:root {
+  color-scheme: light;
+  --paper: #f7f3ec;
+  --card: #ffffff;
+  --ink: #1f1c18;
+  --muted: #6f675c;
+  --line: #e4dccf;
+  --accent: #b0502a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f5e4da;
+  /* en färg per block: 0 = förberedelse, A–D = kapitlets block */
+  --b0: #8a6a1f; --b0-soft: #f3ead2;
+  --bA: #b0502a; --bA-soft: #f5e4da;
+  --bB: #4b6a78; --bB-soft: #e1ebef;
+  --bC: #5f7a3a; --bC-soft: #e6eedb;
+  --bD: #7a4b6e; --bD-soft: #f0e3ec;
+  --bE: #2f6f73; --bE-soft: #dcecec;
+  --bF: #55558a; --bF-soft: #e5e5f2;
+  --ok: #3d7a4b;
+  --ny: #2f68a8; /* nya toner i greppbilden (t.ex. mollskalans 2:a och ♭6) */
+  --radius: 14px;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.55 var(--sans); }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+
+/* ---------- toppen ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 2100;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 20px; background: var(--ink); color: #f7f3ec;
+}
+.brand { text-decoration: none; color: inherit; font-family: var(--serif); font-weight: 700; font-size: 19px; letter-spacing: .2px; white-space: nowrap; }
+.brand span { color: #e9a07f; }
+.doman { font-size: 12.5px; font-weight: 600; color: #bfb5a6; letter-spacing: .02em; white-space: nowrap; }
+.doman[hidden], .utskrift-adress { display: none; }
+.inst-switch { display: flex; background: #3a352e; border-radius: 999px; padding: 3px; }
+.inst-switch a { text-decoration: none; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #cfc6b8; }
+.inst-switch a.on { background: #f7f3ec; color: var(--ink); }
+.topbar .spacer { flex: 1; }
+#kortval { display: none; max-width: 100%; padding: 6px 8px; border-radius: 8px; border: 0; font: inherit; font-size: 14px; }
+
+/* ---------- layout ---------- */
+.layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); align-items: start; }
+.sidebar {
+  position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
+  padding: 18px 14px 40px; border-right: 1px solid var(--line);
+}
+.nav-kap { margin-bottom: 18px; }
+.nav-kap h3 { margin: 0; font-family: var(--serif); font-size: 17px; }
+.nav-kap summary, .nav-blk summary { list-style: none; cursor: pointer; display: flex; align-items: flex-start; gap: 6px; border-radius: 8px; }
+.nav-kap summary::-webkit-details-marker, .nav-blk summary::-webkit-details-marker { display: none; }
+.nav-kap > summary { padding: 4px 6px; }
+.nav-kap summary:hover, .nav-blk summary:hover { background: #ece5d9; }
+.nav-kap summary::before, .nav-blk summary::before {
+  content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 0 2px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform .15s;
+}
+.nav-kap > summary::before { margin-top: 24px; }
+.nav-blk > summary::before { margin-top: 3px; }
+.nav-kap[open] > summary::before, .nav-blk[open] > summary::before { transform: rotate(45deg); }
+.nav-kap > p { margin-left: 25px !important; }
+.nav-blk > summary { margin: 8px 0 2px; padding: 3px 6px; }
+.nav-blk > summary h4 { margin: 0; }
+.nav-verktyg { display: flex; gap: 12px; margin: 0 6px 12px; font-size: 12px; }
+.nav-verktyg button { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.nav-verktyg button:hover { color: var(--ink); }
+.nav-kap h3 span { display: block; font-family: var(--sans); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.nav-kap p { margin: 2px 6px 8px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.nav-kap h4 { margin: 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.nav-item { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 8px; text-decoration: none; font-size: 13.5px; }
+.nav-item:hover { background: #ece5d9; }
+.nav-item.aktiv { background: var(--ink); color: #fff; }
+.nav-item .nid { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--muted); }
+.nav-item.aktiv .nid { color: #e9a07f; }
+.nav-kap h4.b0 { color: var(--b0); } .nav-kap h4.bA { color: var(--bA); } .nav-kap h4.bB { color: var(--bB); }
+.nav-kap h4.bC { color: var(--bC); } .nav-kap h4.bD { color: var(--bD); }
+.nav-kap h4.bE { color: var(--bE); } .nav-kap h4.bF { color: var(--bF); }
+.nav-item.aktiv .nt { color: #fff; }
+.prog { font-size: 9px; letter-spacing: 1px; color: var(--ok); white-space: nowrap; }
+.bock { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.nav-item.klar .nid { color: var(--ok); }
+.nav-item.aktiv.klar .nid { color: #9fd3ab; }
+.raknare { margin-left: 6px; font-family: var(--sans); font-size: 11px; font-style: normal; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.raknare.allt { color: var(--ok); }
+.nav-kap h3.allt-klart, .nav-kap h3.allt-klart span, .nav-kap h4.allt-klart { color: var(--ok); }
+
+main { padding: 26px 28px 0; min-width: 0; }
+.kort { max-width: 1000px; margin: 0 auto; }
+
+/* ---------- kortets huvud ---------- */
+.kort-head { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
+.kort-id {
+  flex: none; min-width: 74px; height: 74px; padding: 0 10px; border-radius: 16px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-family: var(--serif); font-weight: 700; font-size: 30px; font-variant-numeric: tabular-nums;
+}
+.kort-head .kap { font-size: 12.5px; color: var(--muted); letter-spacing: .02em; }
+.kort-head h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 700; font-size: 30px; line-height: 1.15; }
+.badge { margin-left: auto; align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.badge.b0 { background: var(--b0-soft); color: var(--b0); }
+.badge.bA { background: var(--bA-soft); color: var(--bA); }
+.badge.bB { background: var(--bB-soft); color: var(--bB); }
+.badge.bC { background: var(--bC-soft); color: var(--bC); }
+.badge.bD { background: var(--bD-soft); color: var(--bD); }
+.badge.bE { background: var(--bE-soft); color: var(--bE); }
+.badge.bF { background: var(--bF-soft); color: var(--bF); }
+
+/* ---------- paneler ---------- */
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.panel h2 { margin: 0 0 8px; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.grid2.bred { grid-template-columns: 1fr; }
+.grid3 { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 14px; margin: 14px 0; }
+.formel { margin: 0 0 6px; font-family: var(--serif); font-size: 19px; line-height: 1.35; }
+.panel p { margin: 0; }
+.panel ul { margin: 0; padding-left: 18px; }
+.panel li + li { margin-top: 4px; }
+.diagram-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.diagram-head h2 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--paper); }
+.seg button { border: 0; background: none; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button.on { background: var(--ink); color: #fff; }
+#diagram svg { display: block; width: 100%; height: auto; }
+.at-wrap { min-height: 60px; overflow-x: auto; }
+.panel { min-width: 0; }
+.status { font-size: 12.5px; color: var(--muted); }
+.diagram-not { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.ny-prick { width: 11px; height: 11px; border-radius: 50%; background: var(--ny); display: inline-block; }
+
+/* tempotrappa */
+.trappa { display: flex; flex-wrap: wrap; gap: 8px; }
+.trappa label { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 10px; font-variant-numeric: tabular-nums; font-weight: 600; cursor: pointer; background: var(--paper); }
+.trappa input { accent-color: var(--ok); width: 16px; height: 16px; margin: 0; }
+.trappa label.klar { border-color: var(--ok); color: var(--ok); background: #eaf3ec; }
+
+/* start här (genomgång) */
+.guide { max-width: 1000px; margin: 0 auto; }
+.guide[hidden], .kort[hidden] { display: none; }
+body.guidelage .player { display: none; }
+.kort-id.start-id { font-size: 20px; }
+.guide-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+.guide-toc button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.guide-toc button:hover { border-color: var(--ink); }
+.guide-sek { margin-bottom: 14px; scroll-margin-top: 70px; }
+.panel h2.guide-rubrik { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.guide-rubrik span { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-family: var(--sans); font-size: 14px; }
+.guide-text { max-width: 72ch; font-size: 15.5px; }
+.guide-text p { margin: 0 0 8px; }
+.guide-text ul { margin: 0 0 8px; padding-left: 20px; }
+.guide-text li + li { margin-top: 5px; }
+.guide-ex { margin: 14px 0 0; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+.guide-ex .diagram-head { justify-content: flex-end; }
+.guide-ex figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+.guide-start { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 30px; }
+.guide-start .klar-nasta { padding: 14px 22px; }
+.guide-start .klar-nasta.alt { background: var(--ink); }
+.metro-slag { display: flex; gap: 12px; margin-bottom: 12px; }
+.metro-slag span { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: #fff; display: grid; place-items: center; font-weight: 700; color: var(--muted); }
+.metro-slag span.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.metro-slag span:first-child.on { background: var(--ink); border-color: var(--ink); }
+.metro-knappar { display: flex; gap: 8px; flex-wrap: wrap; }
+.metro-knapp { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 7px 14px; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+.metro-knapp:hover { border-color: var(--ink); }
+.metro-knapp.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.nav-item.nav-start { margin: 0 0 14px; background: var(--accent-soft); }
+.nav-item.nav-start .nid { color: var(--accent); }
+.nav-item.nav-start.aktiv { background: var(--ink); }
+
+/* klar-knappen */
+.klarbox { display: flex; gap: 12px; align-items: stretch; margin-top: 14px; }
+.klarknapp {
+  flex: 1; display: flex; align-items: center; gap: 18px; text-align: left; cursor: pointer;
+  padding: 16px 20px; border-radius: var(--radius); border: 2px dashed #cfc5b5; background: var(--card);
+  transition: background .2s, border-color .2s, transform .1s;
+}
+.klarknapp:hover { border-color: var(--ok); }
+.klarknapp:active { transform: scale(.99); }
+.klar-cirkel {
+  position: relative; flex: none; width: 56px; height: 56px; border-radius: 50%; border: 3px solid #cfc5b5;
+  display: grid; place-items: center; background: #fff; transition: background .2s, border-color .2s;
+}
+.klar-cirkel svg { width: 30px; height: 30px; fill: none; stroke: #cfc5b5; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.klarknapp:not(.klar):hover .klar-cirkel svg { stroke-dashoffset: 0; }
+.klar-text strong { display: block; font-family: var(--serif); font-size: 21px; line-height: 1.25; }
+.klar-text span { color: var(--muted); font-size: 14px; }
+.klarknapp.klar { border-style: solid; border-color: var(--ok); background: #eaf3ec; }
+.klarknapp.klar .klar-cirkel { background: var(--ok); border-color: var(--ok); }
+.klarknapp.klar .klar-cirkel svg { stroke: #fff; stroke-dashoffset: 0; transition: stroke-dashoffset .35s .1s ease-out; }
+.klarknapp.klar strong { color: var(--ok); }
+.klarknapp.pop .klar-cirkel { animation: pop .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.klar-nasta { display: flex; align-items: center; padding: 0 22px; border-radius: var(--radius); background: var(--ok); color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.klar-nasta:hover { filter: brightness(1.1); }
+.klar-nasta[hidden] { display: none; }
+.konfetti { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 2px; pointer-events: none; animation: konfetti .75s ease-out forwards; }
+@keyframes konfetti {
+  from { transform: translate(-50%, -50%) rotate(0); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)); opacity: 0; }
+}
+.klar-chip { align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--ok); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.klar-chip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .klarknapp.pop .klar-cirkel { animation: none; }
+  .konfetti { display: none; }
+}
+
+.prevnext { display: flex; justify-content: space-between; gap: 10px; margin: 18px 0 24px; }
+.prevnext a { text-decoration: none; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 14px; }
+.prevnext a:hover { border-color: var(--ink); }
+.prevnext a[hidden] { display: none; }
+
+/* ---------- spelaren ---------- */
+.player {
+  position: sticky; bottom: 0; z-index: 2000; margin: 0 -28px; padding: 10px 28px;
+  background: rgba(31, 28, 24, .96); color: #f7f3ec; backdrop-filter: blur(6px);
+}
+.player-inner { max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.pbtn { border: 0; cursor: pointer; border-radius: 999px; background: #3a352e; color: #f7f3ec; height: 38px; min-width: 38px; padding: 0 12px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.pbtn:hover { background: #4a443b; }
+.pbtn.play { background: var(--accent); width: 46px; height: 46px; font-size: 18px; padding: 0; }
+.pbtn.play:disabled { opacity: .5; cursor: wait; }
+.tempo { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.tempo .bpm { min-width: 74px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+.chip { border: 1px solid #5a5248; background: none; color: #d9d0c2; border-radius: 8px; padding: 3px 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip.on { background: #f7f3ec; color: var(--ink); border-color: #f7f3ec; }
+.toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+.tog { border: 1px solid #5a5248; background: none; color: #bfb5a6; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.tog[aria-pressed="true"] { background: #e9a07f; border-color: #e9a07f; color: var(--ink); }
+.player .status { color: #bfb5a6; margin-left: auto; }
+
+/* alphaTab-markör */
+.at-cursor-bar { background: rgba(176, 80, 42, .10); }
+.at-cursor-beat { background: var(--accent); width: 3px; }
+.at-selection div { background: rgba(176, 80, 42, .15); }
+.at-highlight * { fill: var(--accent); stroke: var(--accent); }
+
+/* ---------- mobil ---------- */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  #kortval { display: block; flex: 1; min-width: 0; }
+  .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 16px; }
+  .topbar .spacer { display: none; }
+  .doman { display: none; }
+  main { padding: 18px 16px 0; }
+  .player { margin: 0 -16px; padding: 10px 16px; }
+  .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  #chips, #print { display: none; }
+  .player-inner { gap: 8px 10px; }
+  .pbtn.play { width: 42px; height: 42px; }
+  .kort-head { gap: 12px; flex-wrap: wrap; }
+  .kort-id { min-width: 58px; height: 58px; font-size: 23px; border-radius: 13px; }
+  .kort-head h1 { font-size: 23px; }
+  .badge { margin-left: 0; }
+  .klarbox { flex-direction: column; }
+  .klar-nasta { justify-content: center; padding: 12px; }
+  .player .status { margin-left: 0; width: 100%; }
+}
+
+/* ---------- utskrift ---------- */
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff; font-size: 12px; }
+  .kort-head { gap: 12px; margin-bottom: 10px; }
+  body.har-doman .utskrift-adress { display: block; margin-left: auto; align-self: flex-start; font-weight: 700; font-size: 13px; color: var(--ink); }
+  body.har-doman .badge { margin-left: 0; }
+  .kort-head h1 { font-size: 24px; }
+  .kort-id { min-width: 56px; height: 56px; font-size: 22px; border-radius: 12px; }
+  .grid2 { gap: 8px; margin-bottom: 8px; }
+  .grid3 { gap: 8px; margin: 8px 0; }
+  .panel h2 { margin-bottom: 4px; }
+  .formel { font-size: 15px; }
+  #diagram svg { max-height: 150px; width: auto; }
+  .grid2.bred #diagram svg { max-height: 125px; }
+  .grid2.bred { gap: 6px; }
+  #cell-at { display: none; }
+  /* långa övningar får delas mellan notraderna i stället för att hela panelen flyttas */
+  .panel.ovning { break-inside: auto; }
+  /* alphaTab placerar notraderna absolut; låt dem flyta som vanliga block så att sidbrytningen
+     hamnar mellan två notrader i stället för mitt i (eller ovanpå) en */
+  .panel.ovning .at-surface { height: auto !important; }
+  .panel.ovning .at-surface > div { position: relative !important; top: auto !important; left: auto !important; break-inside: avoid; }
+  .trappa label { padding: 3px 9px; }
+  .topbar, .sidebar, .player, .seg, .prevnext, .at-cursors, .klarbox, .klar-chip, .guide-toc, .guide-start, .metro { display: none !important; }
+  .guide-sek { break-inside: avoid; }
+  .guide-ex:has(.metro) { display: none; }
+  .layout { display: block; }
+  main { padding: 0; }
+  .panel { break-inside: avoid; padding: 8px 10px; }
+  .grid2 { grid-template-columns: 1fr 1fr; }
+  .grid2.bred { grid-template-columns: 1fr; }
+  .grid3 { grid-template-columns: 1fr 1.3fr 1fr; }
+  .kort-id { background: #fff; color: var(--ink); border: 2px solid var(--ink); }
+  .trappa label { background: #fff; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">Teknik<span>kort</span></a>
+  <span class="doman" hidden></span>
+  <nav class="inst-switch" id="inst-switch"></nav>
+  <div class="spacer"></div>
+  <select id="kortval" aria-label="Välj övning"></select>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="nav"></aside>
+
+  <main>
+    <article class="guide" id="guide" hidden></article>
+
+    <article class="kort" id="kortvy">
+      <div class="kort-head">
+        <div class="kort-id" id="k-id"></div>
+        <div>
+          <div class="kap" id="k-kap"></div>
+          <h1 id="k-titel"></h1>
+        </div>
+        <span class="badge" id="k-block"></span>
+        <span class="klar-chip" id="k-klarchip" hidden>✓ Klar</span>
+        <span class="utskrift-adress"></span>
+      </div>
+
+      <section class="grid2">
+        <div class="panel">
+          <h2>Cellen</h2>
+          <p class="formel" id="k-formel"></p>
+          <div class="at-wrap" id="cell-at"></div>
+        </div>
+        <div class="panel">
+          <div class="diagram-head">
+            <h2>Greppbild</h2>
+            <div class="seg" id="diag-seg">
+              <button data-mode="ro">R / o</button>
+              <button data-mode="iv">Intervaller</button>
+              <button data-mode="namn">Tonnamn</button>
+            </div>
+          </div>
+          <div id="diagram"></div>
+        </div>
+      </section>
+
+      <section class="panel ovning">
+        <h2>Hela övningen</h2>
+        <div class="at-wrap" id="main-at"></div>
+      </section>
+
+      <section class="grid3">
+        <div class="panel"><h2>Mål</h2><p id="k-mal"></p></div>
+        <div class="panel"><h2>Så gör du</h2><p id="k-gor"></p></div>
+        <div class="panel"><h2>Variationer</h2><ul id="k-var"></ul></div>
+      </section>
+
+      <section class="panel">
+        <h2>Tempotrappa – kryssa när det sitter</h2>
+        <div class="trappa" id="k-trappa"></div>
+      </section>
+
+      <section class="klarbox">
+        <button class="klarknapp" id="klarknapp" aria-pressed="false">
+          <span class="klar-cirkel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          <span class="klar-text"><strong id="klar-rubrik"></strong><span id="klar-under"></span></span>
+        </button>
+        <a class="klar-nasta" id="klar-nasta" href="#" hidden>Nästa kort →</a>
+      </section>
+
+      <nav class="prevnext">
+        <a id="prev" href="#"></a>
+        <a id="next" href="#"></a>
+      </nav>
+    </article>
+
+    <div class="player">
+      <div class="player-inner">
+        <button class="pbtn play" id="play" disabled aria-label="Spela">▶</button>
+        <button class="pbtn" id="stop" aria-label="Stoppa">■</button>
+        <div class="tempo">
+          <button class="pbtn" id="slower" aria-label="Långsammare">−</button>
+          <span class="bpm" id="bpm">♩ = 60</span>
+          <button class="pbtn" id="faster" aria-label="Snabbare">+</button>
+          <span id="chips"></span>
+        </div>
+        <div class="toggles">
+          <button class="tog" data-opt="metronom">Metronom</button>
+          <button class="tog" data-opt="inrakning">Inräkning</button>
+          <button class="tog" data-opt="loop">Loop</button>
+          <button class="tog" data-opt="bordun">Bordun</button>
+        </div>
+        <button class="pbtn" id="print">Skriv ut</button>
+        <span class="status" id="status">Laddar …</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const DATA = {"instrument": "bas", "titel": "Elbas", "variant": "elev", "doman": null, "kapitel": {"0": {"titel": "Förberedelse", "intro": "Små bitar ur G-moll-box 1: puls, ett finger per band och strängbyten. När kapitlet är klart har du redan spelat hela box 1, i delar. Spelar du redan lite? Börja direkt på övning 1."}, "1": {"titel": "De fem boxarna", "intro": "G-mollpentatonik, en box i taget: först upp och ned för att lära formen, sedan fyrgrupper för plektrumteknik och koordination. Samma mönster i varje box, bara formen byts. Avslutas med formkedjan."}, "2": {"titel": "Mer teknik i boxarna", "intro": "Tre nya mönster, vart och ett genom alla fem boxar: tregrupper, hopp och string skipping. Avslutas med en sicksack längs hela halsen."}, "3": {"titel": "G-mollskalan", "intro": "Först hela skalan på en sträng. Sedan de fem boxarna igen, nu med två nya toner (A och E♭) som gör pentatoniken till en hel mollskala: upp och ned, sedan fyrgrupper, box för box."}}, "kort": [{"id": "F1", "kap": 0, "titel": "Puls på öppen G-sträng", "block": "Förberedelse", "formel": "4 slag per takt · sedan 8", "mal": "Stadig puls och avslappnad hand.", "gor": "Spela öppen G-sträng till metronomen: fjärdedelar i två takter, sedan åttondelar. Använd växelfingrar (pek–lång). Slå på borduntonen och lyssna på hur G klingar i G-moll.", "variationer": ["V1 Accent på slag 1", "V2 Spela tyst – mellan – starkt", "V3 Bara på slag 2 och 4"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 0.1.4 0.1.4 0.1.4 0.1.4 |\n0.1.4 0.1.4 0.1.4 0.1.4 |\n0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 |\n0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 0.1.8 |\n0.1.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 0.1.4 0.1.4 0.1.4 0.1.4", "diagram": {"lo": 0, "hi": 0, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 3, "f": 0, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 5}, {"id": "F2", "kap": 0, "titel": "En sträng: G – B♭ – C", "block": "Förberedelse", "formel": "0 3 5 3 · 0 3 5 3", "mal": "Ett finger per band: pekfinger band 3, ringfinger band 5.", "gor": "Tre toner på G-strängen, upp och ned. Först fjärdedelar, sedan åttondelar. Håll fingrarna nära strängen. Använd växelfingrar (pek–lång).", "variationer": ["V1 Legato: slå bara första tonen, hammer-on/pull-off på resten", "V2 Swing (långt–kort)", "V3 Baklänges: 5 3 0 3"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 0.1.4 3.1.4 5.1.4 3.1.4 |\n0.1.4 3.1.4 5.1.4 3.1.4 |\n0.1.8 3.1.8 5.1.8 3.1.8 0.1.8 3.1.8 5.1.8 3.1.8 |\n0.1.8 3.1.8 5.1.8 3.1.8 0.1.8 3.1.8 5.1.8 3.1.8 |\n0.1.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 0.1.4 3.1.4 5.1.4 3.1.4", "diagram": {"lo": 0, "hi": 5, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 3, "f": 0, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 5}, {"id": "F3", "kap": 0, "titel": "Två strängar: E och A", "block": "Förberedelse", "formel": "G B♭ C D C B♭ · G", "mal": "Jämna åttondelar, ett finger per band, sista tonen hålls ut.", "gor": "Spela fragmentet 4 gånger i rad utan paus. Använd växelfingrar (pek–lång). Titta på greppbilden: det här är en bit av box 1, som kommer i kapitel 1.", "variationer": ["V1 Legato på varje sträng", "V2 Swing", "V3 Accent på varje taktslag"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.3.8 6.4.8 3.4.4 |\n3.4.8 6.4.8 3.3.8 5.3.8 3.3.8 6.4.8 3.4.4 |\n3.4.8 6.4.8 3.3.8 5.3.8 3.3.8 6.4.8 3.4.4 |\n3.4.8 6.4.8 3.3.8 5.3.8 3.3.8 6.4.8 3.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.3.8 6.4.8 3.4.4", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "F4", "kap": 0, "titel": "Två strängar: A och D", "block": "Förberedelse", "formel": "G F D C D F · G", "mal": "Jämna åttondelar, ett finger per band, sista tonen hålls ut.", "gor": "Spela fragmentet 4 gånger i rad utan paus. Använd växelfingrar (pek–lång). Titta på greppbilden: det här är en bit av box 1, som kommer i kapitel 1.", "variationer": ["V1 Legato på varje sträng", "V2 Swing", "V3 Accent på varje taktslag"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 5.2.8 3.2.8 5.3.8 3.3.8 5.3.8 3.2.8 5.2.4 |\n5.2.8 3.2.8 5.3.8 3.3.8 5.3.8 3.2.8 5.2.4 |\n5.2.8 3.2.8 5.3.8 3.3.8 5.3.8 3.2.8 5.2.4 |\n5.2.8 3.2.8 5.3.8 3.3.8 5.3.8 3.2.8 5.2.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 5.2.8 3.2.8 5.3.8 3.3.8 5.3.8 3.2.8 5.2.4", "diagram": {"lo": 3, "hi": 5, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "F5", "kap": 0, "titel": "Två strängar: D och G", "block": "Förberedelse", "formel": "G B♭ C B♭ G F · G", "mal": "Jämna åttondelar, ett finger per band, sista tonen hålls ut.", "gor": "Spela fragmentet 4 gånger i rad utan paus. Använd växelfingrar (pek–lång). Titta på greppbilden: det här är en bit av box 1, som kommer i kapitel 1.", "variationer": ["V1 Legato på varje sträng", "V2 Swing", "V3 Accent på varje taktslag"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 5.2.8 3.1.8 5.1.8 3.1.8 5.2.8 3.2.8 5.2.4 |\n5.2.8 3.1.8 5.1.8 3.1.8 5.2.8 3.2.8 5.2.4 |\n5.2.8 3.1.8 5.1.8 3.1.8 5.2.8 3.2.8 5.2.4 |\n5.2.8 3.1.8 5.1.8 3.1.8 5.2.8 3.2.8 5.2.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 5.2.8 3.1.8 5.1.8 3.1.8 5.2.8 3.2.8 5.2.4", "diagram": {"lo": 3, "hi": 5, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "1", "kap": 1, "titel": "Box 1 · upp och ned", "block": "A. Box 1", "formel": "hela boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Spela boxen från lägsta tonen till högsta och tillbaka. Sista tonen hålls ut. Säg gärna R högt (eller tänk det) varje gång du spelar en grundton.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Starta på slag 2"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8 |\n3.1.8 5.2.8 3.2.8 5.3.8 3.3.8 6.4.8 3.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "2", "kap": 1, "titel": "Box 1 · fyrgrupper", "block": "A. Box 1", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Fyra toner upp från varje ton i boxen. Högst upp vänder du och gör samma sak nedåt. Två grupper per halvtakt: räkna \"1-och-2-och\".", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 6.4.8 3.3.8 5.3.8 3.2.8 |\n3.3.8 5.3.8 3.2.8 5.2.8 5.3.8 3.2.8 5.2.8 3.1.8 |\n3.2.8 5.2.8 3.1.8 5.1.8 5.1.8 3.1.8 5.2.8 3.2.8 |\n3.1.8 5.2.8 3.2.8 5.3.8 5.2.8 3.2.8 5.3.8 3.3.8 |\n3.2.8 5.3.8 3.3.8 6.4.8 5.3.8 3.3.8 6.4.8 3.4.8 |\n3.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 6.4.8 3.3.8 5.3.8 3.2.8", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 6}, {"id": "3", "kap": 1, "titel": "Box 2 · upp och ned", "block": "B. Box 2", "formel": "hela boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "En ny form, men samma sak som i övning 1. Box 2 börjar på den högre tonen på E-strängen i box 1, så boxarna hakar i varandra. Titta på greppbilden och leta upp grundtonerna (R) innan du spelar.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Starta på slag 2"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 8.3.8 5.2.8 8.2.8 5.1.8 7.1.8 |\n5.1.8 8.2.8 5.2.8 8.3.8 5.3.8 8.4.8 6.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 8.3.8 5.2.8 8.2.8 5.1.8 7.1.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "4", "kap": 1, "titel": "Box 2 · fyrgrupper", "block": "B. Box 2", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 2, nu i box 2. Fyra toner upp från varje ton, högst upp vänder du och gör samma sak nedåt.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 8.3.8 8.4.8 5.3.8 8.3.8 5.2.8 |\n5.3.8 8.3.8 5.2.8 8.2.8 8.3.8 5.2.8 8.2.8 5.1.8 |\n5.2.8 8.2.8 5.1.8 7.1.8 7.1.8 5.1.8 8.2.8 5.2.8 |\n5.1.8 8.2.8 5.2.8 8.3.8 8.2.8 5.2.8 8.3.8 5.3.8 |\n5.2.8 8.3.8 5.3.8 8.4.8 8.3.8 5.3.8 8.4.8 6.4.8 |\n6.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 8.3.8 8.4.8 5.3.8 8.3.8 5.2.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 6}, {"id": "5", "kap": 1, "titel": "Box 3 · upp och ned", "block": "C. Box 3", "formel": "hela boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "En ny form, men samma sak som i övning 1. Box 3 börjar på den högre tonen på E-strängen i box 2, så boxarna hakar i varandra. Titta på greppbilden och leta upp grundtonerna (R) innan du spelar.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Starta på slag 2"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.3.8 10.3.8 8.2.8 10.2.8 7.1.8 10.1.8 |\n7.1.8 10.2.8 8.2.8 10.3.8 8.3.8 10.4.8 8.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.3.8 10.3.8 8.2.8 10.2.8 7.1.8 10.1.8", "diagram": {"lo": 7, "hi": 10, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "6", "kap": 1, "titel": "Box 3 · fyrgrupper", "block": "C. Box 3", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 2, nu i box 3. Fyra toner upp från varje ton, högst upp vänder du och gör samma sak nedåt.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.3.8 10.3.8 10.4.8 8.3.8 10.3.8 8.2.8 |\n8.3.8 10.3.8 8.2.8 10.2.8 10.3.8 8.2.8 10.2.8 7.1.8 |\n8.2.8 10.2.8 7.1.8 10.1.8 10.1.8 7.1.8 10.2.8 8.2.8 |\n7.1.8 10.2.8 8.2.8 10.3.8 10.2.8 8.2.8 10.3.8 8.3.8 |\n8.2.8 10.3.8 8.3.8 10.4.8 10.3.8 8.3.8 10.4.8 8.4.8 |\n8.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.3.8 10.3.8 10.4.8 8.3.8 10.3.8 8.2.8", "diagram": {"lo": 7, "hi": 10, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 6}, {"id": "7", "kap": 1, "titel": "Box 4 · upp och ned", "block": "D. Box 4", "formel": "hela boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "En ny form, men samma sak som i övning 1. Box 4 börjar på den högre tonen på E-strängen i box 3, så boxarna hakar i varandra. Titta på greppbilden och leta upp grundtonerna (R) innan du spelar.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Starta på slag 2"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.3.8 13.3.8 10.2.8 12.2.8 10.1.8 12.1.8 |\n10.1.8 12.2.8 10.2.8 13.3.8 10.3.8 13.4.8 10.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.3.8 13.3.8 10.2.8 12.2.8 10.1.8 12.1.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "8", "kap": 1, "titel": "Box 4 · fyrgrupper", "block": "D. Box 4", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 2, nu i box 4. Fyra toner upp från varje ton, högst upp vänder du och gör samma sak nedåt.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.3.8 13.3.8 13.4.8 10.3.8 13.3.8 10.2.8 |\n10.3.8 13.3.8 10.2.8 12.2.8 13.3.8 10.2.8 12.2.8 10.1.8 |\n10.2.8 12.2.8 10.1.8 12.1.8 12.1.8 10.1.8 12.2.8 10.2.8 |\n10.1.8 12.2.8 10.2.8 13.3.8 12.2.8 10.2.8 13.3.8 10.3.8 |\n10.2.8 13.3.8 10.3.8 13.4.8 13.3.8 10.3.8 13.4.8 10.4.8 |\n10.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.3.8 13.3.8 13.4.8 10.3.8 13.3.8 10.2.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 6}, {"id": "9", "kap": 1, "titel": "Box 5 · upp och ned", "block": "E. Box 5", "formel": "hela boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "En ny form, men samma sak som i övning 1. Box 5 börjar på den högre tonen på E-strängen i box 4, så boxarna hakar i varandra. Titta på greppbilden och leta upp grundtonerna (R) innan du spelar.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Starta på slag 2"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 13.3.8 15.3.8 12.2.8 15.2.8 12.1.8 15.1.8 |\n12.1.8 15.2.8 12.2.8 15.3.8 13.3.8 15.4.8 13.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 13.3.8 15.3.8 12.2.8 15.2.8 12.1.8 15.1.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "10", "kap": 1, "titel": "Box 5 · fyrgrupper", "block": "E. Box 5", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 2, nu i box 5. Fyra toner upp från varje ton, högst upp vänder du och gör samma sak nedåt.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 13.3.8 15.3.8 15.4.8 13.3.8 15.3.8 12.2.8 |\n13.3.8 15.3.8 12.2.8 15.2.8 15.3.8 12.2.8 15.2.8 12.1.8 |\n12.2.8 15.2.8 12.1.8 15.1.8 15.1.8 12.1.8 15.2.8 12.2.8 |\n12.1.8 15.2.8 12.2.8 15.3.8 15.2.8 12.2.8 15.3.8 13.3.8 |\n12.2.8 15.3.8 13.3.8 15.4.8 15.3.8 13.3.8 15.4.8 13.4.8 |\n13.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 13.3.8 15.3.8 15.4.8 13.3.8 15.3.8 12.2.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 6}, {"id": "11", "kap": 1, "titel": "Box 5 · nere vid band 1", "block": "E. Box 5", "formel": "samma form som box 5 · en oktav lägre · med öppna strängar", "mal": "Öppna strängar ska låta lika starkt och lika länge som de andra tonerna.", "gor": "Box 5 finns också längst ned på halsen, till vänster om box 1. Formen är densamma, men några toner blir öppna strängar (band 0, vita ringar i greppbilden). Ett finger per band: pekfinger på band 1, långfinger på band 2, ringfinger på band 3. Lägg märke till att de högsta tonerna här är de lägsta i box 1.", "variationer": ["V1 Fortsätt direkt in i box 1 utan paus", "V2 Swing (långt–kort)", "V3 Fyrgrupper i den här boxen (som i övning 2)"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 1.4.8 3.4.8 1.3.8 3.3.8 0.2.8 3.2.8 0.1.8 3.1.8 |\n0.1.8 3.2.8 0.2.8 3.3.8 1.3.8 3.4.8 1.4.4\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 1.4.8 3.4.8 1.3.8 3.3.8 0.2.8 3.2.8 0.1.8 3.1.8", "diagram": {"lo": 0, "hi": 3, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 1, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 1, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 0, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 0, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 2}, {"id": "12", "kap": 1, "titel": "Formkedjan: box 1 → 5 → 1", "block": "F. Avslutning", "formel": "box 1 upp · box 2 upp · … · box 1 igen (tolv band upp)", "mal": "Se hur boxarna hakar i varandra. Byt box på den långa tonen.", "gor": "Spela varje box uppåt och flytta till nästa. Efter box 5 kommer box 1 igen, en oktav högre (band 15). Formerna bildar en slinga över hela halsen. Lägg märke till att högsta tonerna i en box är de lägsta i nästa.", "variationer": ["V1 Hela vägen ned igen (box 1 → 5 baklänges)", "V2 Spela bara grundtonerna i varje box", "V3 Fyrgrupper i varje box i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8 |\n5.1.1 |\n6.4.8 8.4.8 5.3.8 8.3.8 5.2.8 8.2.8 5.1.8 7.1.8 |\n7.1.1 |\n8.4.8 10.4.8 8.3.8 10.3.8 8.2.8 10.2.8 7.1.8 10.1.8 |\n10.1.1 |\n10.4.8 13.4.8 10.3.8 13.3.8 10.2.8 12.2.8 10.1.8 12.1.8 |\n12.1.1 |\n13.4.8 15.4.8 13.3.8 15.3.8 12.2.8 15.2.8 12.1.8 15.1.8 |\n15.1.1 |\n15.4.8 18.4.8 15.3.8 17.3.8 15.2.8 17.2.8 15.1.8 17.1.8 |\n17.1.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8 |\n5.1.1", "diagram": {"lo": 3, "hi": 18, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 18, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 17, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 17, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 17, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 12}, {"id": "13", "kap": 2, "titel": "Box 1 · tregrupper", "block": "A. Tregrupper", "formel": "1 2 3 · 2 3 4 · 3 4 5 · …  (sedan samma sak nedåt)", "mal": "Jämna trioler. Accent på första tonen i varje grupp.", "gor": "Tre toner upp från varje ton i boxen. Högst upp vänder du och gör samma sak nedåt. Räkna \"tri-o-la\" per slag. Med växelslag hamnar nedslaget på olika toner i varje grupp: det är just det som tränar koordinationen.", "variationer": ["V1 Åttondelar i stället (accenten vandrar över slagen)", "V2 Legato", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 {tu 3} 6.4.8 {tu 3} 3.3.8 {tu 3} 6.4.8 {tu 3} 3.3.8 {tu 3} 5.3.8 {tu 3} 3.3.8 {tu 3} 5.3.8 {tu 3} 3.2.8 {tu 3} 5.3.8 {tu 3} 3.2.8 {tu 3} 5.2.8 {tu 3} |\n3.2.8 {tu 3} 5.2.8 {tu 3} 3.1.8 {tu 3} 5.2.8 {tu 3} 3.1.8 {tu 3} 5.1.8 {tu 3} 5.1.8 {tu 3} 3.1.8 {tu 3} 5.2.8 {tu 3} 3.1.8 {tu 3} 5.2.8 {tu 3} 3.2.8 {tu 3} |\n5.2.8 {tu 3} 3.2.8 {tu 3} 5.3.8 {tu 3} 3.2.8 {tu 3} 5.3.8 {tu 3} 3.3.8 {tu 3} 5.3.8 {tu 3} 3.3.8 {tu 3} 6.4.8 {tu 3} 3.3.8 {tu 3} 6.4.8 {tu 3} 3.4.8 {tu 3} |\n3.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 {tu 3} 6.4.8 {tu 3} 3.3.8 {tu 3} 6.4.8 {tu 3} 3.3.8 {tu 3} 5.3.8 {tu 3} 3.3.8 {tu 3} 5.3.8 {tu 3} 3.2.8 {tu 3} 5.3.8 {tu 3} 3.2.8 {tu 3} 5.2.8 {tu 3}", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "14", "kap": 2, "titel": "Box 2 · tregrupper", "block": "A. Tregrupper", "formel": "1 2 3 · 2 3 4 · 3 4 5 · …  (sedan samma sak nedåt)", "mal": "Jämna trioler. Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 13, nu i box 2.", "variationer": ["V1 Åttondelar i stället (accenten vandrar över slagen)", "V2 Legato", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 {tu 3} 8.4.8 {tu 3} 5.3.8 {tu 3} 8.4.8 {tu 3} 5.3.8 {tu 3} 8.3.8 {tu 3} 5.3.8 {tu 3} 8.3.8 {tu 3} 5.2.8 {tu 3} 8.3.8 {tu 3} 5.2.8 {tu 3} 8.2.8 {tu 3} |\n5.2.8 {tu 3} 8.2.8 {tu 3} 5.1.8 {tu 3} 8.2.8 {tu 3} 5.1.8 {tu 3} 7.1.8 {tu 3} 7.1.8 {tu 3} 5.1.8 {tu 3} 8.2.8 {tu 3} 5.1.8 {tu 3} 8.2.8 {tu 3} 5.2.8 {tu 3} |\n8.2.8 {tu 3} 5.2.8 {tu 3} 8.3.8 {tu 3} 5.2.8 {tu 3} 8.3.8 {tu 3} 5.3.8 {tu 3} 8.3.8 {tu 3} 5.3.8 {tu 3} 8.4.8 {tu 3} 5.3.8 {tu 3} 8.4.8 {tu 3} 6.4.8 {tu 3} |\n6.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 {tu 3} 8.4.8 {tu 3} 5.3.8 {tu 3} 8.4.8 {tu 3} 5.3.8 {tu 3} 8.3.8 {tu 3} 5.3.8 {tu 3} 8.3.8 {tu 3} 5.2.8 {tu 3} 8.3.8 {tu 3} 5.2.8 {tu 3} 8.2.8 {tu 3}", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "15", "kap": 2, "titel": "Box 3 · tregrupper", "block": "A. Tregrupper", "formel": "1 2 3 · 2 3 4 · 3 4 5 · …  (sedan samma sak nedåt)", "mal": "Jämna trioler. Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 13, nu i box 3.", "variationer": ["V1 Åttondelar i stället (accenten vandrar över slagen)", "V2 Legato", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 {tu 3} 10.4.8 {tu 3} 8.3.8 {tu 3} 10.4.8 {tu 3} 8.3.8 {tu 3} 10.3.8 {tu 3} 8.3.8 {tu 3} 10.3.8 {tu 3} 8.2.8 {tu 3} 10.3.8 {tu 3} 8.2.8 {tu 3} 10.2.8 {tu 3} |\n8.2.8 {tu 3} 10.2.8 {tu 3} 7.1.8 {tu 3} 10.2.8 {tu 3} 7.1.8 {tu 3} 10.1.8 {tu 3} 10.1.8 {tu 3} 7.1.8 {tu 3} 10.2.8 {tu 3} 7.1.8 {tu 3} 10.2.8 {tu 3} 8.2.8 {tu 3} |\n10.2.8 {tu 3} 8.2.8 {tu 3} 10.3.8 {tu 3} 8.2.8 {tu 3} 10.3.8 {tu 3} 8.3.8 {tu 3} 10.3.8 {tu 3} 8.3.8 {tu 3} 10.4.8 {tu 3} 8.3.8 {tu 3} 10.4.8 {tu 3} 8.4.8 {tu 3} |\n8.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 {tu 3} 10.4.8 {tu 3} 8.3.8 {tu 3} 10.4.8 {tu 3} 8.3.8 {tu 3} 10.3.8 {tu 3} 8.3.8 {tu 3} 10.3.8 {tu 3} 8.2.8 {tu 3} 10.3.8 {tu 3} 8.2.8 {tu 3} 10.2.8 {tu 3}", "diagram": {"lo": 7, "hi": 10, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "16", "kap": 2, "titel": "Box 4 · tregrupper", "block": "A. Tregrupper", "formel": "1 2 3 · 2 3 4 · 3 4 5 · …  (sedan samma sak nedåt)", "mal": "Jämna trioler. Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 13, nu i box 4.", "variationer": ["V1 Åttondelar i stället (accenten vandrar över slagen)", "V2 Legato", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 {tu 3} 13.4.8 {tu 3} 10.3.8 {tu 3} 13.4.8 {tu 3} 10.3.8 {tu 3} 13.3.8 {tu 3} 10.3.8 {tu 3} 13.3.8 {tu 3} 10.2.8 {tu 3} 13.3.8 {tu 3} 10.2.8 {tu 3} 12.2.8 {tu 3} |\n10.2.8 {tu 3} 12.2.8 {tu 3} 10.1.8 {tu 3} 12.2.8 {tu 3} 10.1.8 {tu 3} 12.1.8 {tu 3} 12.1.8 {tu 3} 10.1.8 {tu 3} 12.2.8 {tu 3} 10.1.8 {tu 3} 12.2.8 {tu 3} 10.2.8 {tu 3} |\n12.2.8 {tu 3} 10.2.8 {tu 3} 13.3.8 {tu 3} 10.2.8 {tu 3} 13.3.8 {tu 3} 10.3.8 {tu 3} 13.3.8 {tu 3} 10.3.8 {tu 3} 13.4.8 {tu 3} 10.3.8 {tu 3} 13.4.8 {tu 3} 10.4.8 {tu 3} |\n10.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 {tu 3} 13.4.8 {tu 3} 10.3.8 {tu 3} 13.4.8 {tu 3} 10.3.8 {tu 3} 13.3.8 {tu 3} 10.3.8 {tu 3} 13.3.8 {tu 3} 10.2.8 {tu 3} 13.3.8 {tu 3} 10.2.8 {tu 3} 12.2.8 {tu 3}", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "17", "kap": 2, "titel": "Box 5 · tregrupper", "block": "A. Tregrupper", "formel": "1 2 3 · 2 3 4 · 3 4 5 · …  (sedan samma sak nedåt)", "mal": "Jämna trioler. Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 13, nu i box 5.", "variationer": ["V1 Åttondelar i stället (accenten vandrar över slagen)", "V2 Legato", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 {tu 3} 15.4.8 {tu 3} 13.3.8 {tu 3} 15.4.8 {tu 3} 13.3.8 {tu 3} 15.3.8 {tu 3} 13.3.8 {tu 3} 15.3.8 {tu 3} 12.2.8 {tu 3} 15.3.8 {tu 3} 12.2.8 {tu 3} 15.2.8 {tu 3} |\n12.2.8 {tu 3} 15.2.8 {tu 3} 12.1.8 {tu 3} 15.2.8 {tu 3} 12.1.8 {tu 3} 15.1.8 {tu 3} 15.1.8 {tu 3} 12.1.8 {tu 3} 15.2.8 {tu 3} 12.1.8 {tu 3} 15.2.8 {tu 3} 12.2.8 {tu 3} |\n15.2.8 {tu 3} 12.2.8 {tu 3} 15.3.8 {tu 3} 12.2.8 {tu 3} 15.3.8 {tu 3} 13.3.8 {tu 3} 15.3.8 {tu 3} 13.3.8 {tu 3} 15.4.8 {tu 3} 13.3.8 {tu 3} 15.4.8 {tu 3} 13.4.8 {tu 3} |\n13.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 {tu 3} 15.4.8 {tu 3} 13.3.8 {tu 3} 15.4.8 {tu 3} 13.3.8 {tu 3} 15.3.8 {tu 3} 13.3.8 {tu 3} 15.3.8 {tu 3} 12.2.8 {tu 3} 15.3.8 {tu 3} 12.2.8 {tu 3} 15.2.8 {tu 3}", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "18", "kap": 2, "titel": "Box 1 · hopp", "block": "B. Hopp", "formel": "1 3 · 2 4 · 3 5 · …  (varannan ton, sedan nedåt)", "mal": "Rena strängbyten: låt inte tonerna ringa ihop.", "gor": "Hoppa över en ton i boxen varje gång: första och tredje, andra och fjärde osv. Det låter genast mer som en melodi än en skala.", "variationer": ["V1 Omvänt: 3 1 · 4 2 · …", "V2 Swing", "V3 Accent på andra tonen i varje par"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 3.3.8 6.4.8 5.3.8 3.3.8 3.2.8 5.3.8 5.2.8 |\n3.2.8 3.1.8 5.2.8 5.1.8 5.1.8 5.2.8 3.1.8 3.2.8 |\n5.2.8 5.3.8 3.2.8 3.3.8 5.3.8 6.4.8 3.3.8 3.4.8 |\n3.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 3.3.8 6.4.8 5.3.8 3.3.8 3.2.8 5.3.8 5.2.8", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "19", "kap": 2, "titel": "Box 2 · hopp", "block": "B. Hopp", "formel": "1 3 · 2 4 · 3 5 · …  (varannan ton, sedan nedåt)", "mal": "Rena strängbyten: låt inte tonerna ringa ihop.", "gor": "Samma mönster som i övning 18, nu i box 2.", "variationer": ["V1 Omvänt: 3 1 · 4 2 · …", "V2 Swing", "V3 Accent på andra tonen i varje par"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 5.3.8 8.4.8 8.3.8 5.3.8 5.2.8 8.3.8 8.2.8 |\n5.2.8 5.1.8 8.2.8 7.1.8 7.1.8 8.2.8 5.1.8 5.2.8 |\n8.2.8 8.3.8 5.2.8 5.3.8 8.3.8 8.4.8 5.3.8 6.4.8 |\n6.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 5.3.8 8.4.8 8.3.8 5.3.8 5.2.8 8.3.8 8.2.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "20", "kap": 2, "titel": "Box 3 · hopp", "block": "B. Hopp", "formel": "1 3 · 2 4 · 3 5 · …  (varannan ton, sedan nedåt)", "mal": "Rena strängbyten: låt inte tonerna ringa ihop.", "gor": "Samma mönster som i övning 18, nu i box 3.", "variationer": ["V1 Omvänt: 3 1 · 4 2 · …", "V2 Swing", "V3 Accent på andra tonen i varje par"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 8.3.8 10.4.8 10.3.8 8.3.8 8.2.8 10.3.8 10.2.8 |\n8.2.8 7.1.8 10.2.8 10.1.8 10.1.8 10.2.8 7.1.8 8.2.8 |\n10.2.8 10.3.8 8.2.8 8.3.8 10.3.8 10.4.8 8.3.8 8.4.8 |\n8.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 8.3.8 10.4.8 10.3.8 8.3.8 8.2.8 10.3.8 10.2.8", "diagram": {"lo": 7, "hi": 10, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "21", "kap": 2, "titel": "Box 4 · hopp", "block": "B. Hopp", "formel": "1 3 · 2 4 · 3 5 · …  (varannan ton, sedan nedåt)", "mal": "Rena strängbyten: låt inte tonerna ringa ihop.", "gor": "Samma mönster som i övning 18, nu i box 4.", "variationer": ["V1 Omvänt: 3 1 · 4 2 · …", "V2 Swing", "V3 Accent på andra tonen i varje par"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 10.3.8 13.4.8 13.3.8 10.3.8 10.2.8 13.3.8 12.2.8 |\n10.2.8 10.1.8 12.2.8 12.1.8 12.1.8 12.2.8 10.1.8 10.2.8 |\n12.2.8 13.3.8 10.2.8 10.3.8 13.3.8 13.4.8 10.3.8 10.4.8 |\n10.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 10.3.8 13.4.8 13.3.8 10.3.8 10.2.8 13.3.8 12.2.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "22", "kap": 2, "titel": "Box 5 · hopp", "block": "B. Hopp", "formel": "1 3 · 2 4 · 3 5 · …  (varannan ton, sedan nedåt)", "mal": "Rena strängbyten: låt inte tonerna ringa ihop.", "gor": "Samma mönster som i övning 18, nu i box 5.", "variationer": ["V1 Omvänt: 3 1 · 4 2 · …", "V2 Swing", "V3 Accent på andra tonen i varje par"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 13.3.8 15.4.8 15.3.8 13.3.8 12.2.8 15.3.8 15.2.8 |\n12.2.8 12.1.8 15.2.8 15.1.8 15.1.8 15.2.8 12.1.8 12.2.8 |\n15.2.8 15.3.8 12.2.8 13.3.8 15.3.8 15.4.8 13.3.8 13.4.8 |\n13.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 13.3.8 15.4.8 15.3.8 13.3.8 12.2.8 15.3.8 15.2.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "23", "kap": 2, "titel": "Box 1 · string skipping", "block": "C. String skipping", "formel": "E+D · A+G  (två toner per sträng, sedan samma sak nedåt)", "mal": "Rena hopp: låt inte tonerna ringa ihop, dämpa strängen du hoppar över.", "gor": "Två toner på en sträng, hoppa över nästa sträng och spela två toner på strängen efter. Börja sedan en sträng högre och gör samma sak. Högst upp vänder du och gör likadant nedåt.", "variationer": ["V1 Swing", "V2 Legato: slå bara första tonen på varje sträng", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.2.8 5.2.8 3.3.8 5.3.8 3.1.8 5.1.8 |\n5.1.8 3.1.8 5.3.8 3.3.8 5.2.8 3.2.8 6.4.8 3.4.8 |\n3.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.2.8 5.2.8 3.3.8 5.3.8 3.1.8 5.1.8", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "24", "kap": 2, "titel": "Box 2 · string skipping", "block": "C. String skipping", "formel": "E+D · A+G  (två toner per sträng, sedan samma sak nedåt)", "mal": "Rena hopp: låt inte tonerna ringa ihop, dämpa strängen du hoppar över.", "gor": "Samma mönster som i övning 23, nu i box 2.", "variationer": ["V1 Swing", "V2 Legato: slå bara första tonen på varje sträng", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.2.8 8.2.8 5.3.8 8.3.8 5.1.8 7.1.8 |\n7.1.8 5.1.8 8.3.8 5.3.8 8.2.8 5.2.8 8.4.8 6.4.8 |\n6.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.2.8 8.2.8 5.3.8 8.3.8 5.1.8 7.1.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "25", "kap": 2, "titel": "Box 3 · string skipping", "block": "C. String skipping", "formel": "E+D · A+G  (två toner per sträng, sedan samma sak nedåt)", "mal": "Rena hopp: låt inte tonerna ringa ihop, dämpa strängen du hoppar över.", "gor": "Samma mönster som i övning 23, nu i box 3.", "variationer": ["V1 Swing", "V2 Legato: slå bara första tonen på varje sträng", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.2.8 10.2.8 8.3.8 10.3.8 7.1.8 10.1.8 |\n10.1.8 7.1.8 10.3.8 8.3.8 10.2.8 8.2.8 10.4.8 8.4.8 |\n8.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 8.2.8 10.2.8 8.3.8 10.3.8 7.1.8 10.1.8", "diagram": {"lo": 7, "hi": 10, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "26", "kap": 2, "titel": "Box 4 · string skipping", "block": "C. String skipping", "formel": "E+D · A+G  (två toner per sträng, sedan samma sak nedåt)", "mal": "Rena hopp: låt inte tonerna ringa ihop, dämpa strängen du hoppar över.", "gor": "Samma mönster som i övning 23, nu i box 4.", "variationer": ["V1 Swing", "V2 Legato: slå bara första tonen på varje sträng", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.2.8 12.2.8 10.3.8 13.3.8 10.1.8 12.1.8 |\n12.1.8 10.1.8 13.3.8 10.3.8 12.2.8 10.2.8 13.4.8 10.4.8 |\n10.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 13.4.8 10.2.8 12.2.8 10.3.8 13.3.8 10.1.8 12.1.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "27", "kap": 2, "titel": "Box 5 · string skipping", "block": "C. String skipping", "formel": "E+D · A+G  (två toner per sträng, sedan samma sak nedåt)", "mal": "Rena hopp: låt inte tonerna ringa ihop, dämpa strängen du hoppar över.", "gor": "Samma mönster som i övning 23, nu i box 5.", "variationer": ["V1 Swing", "V2 Legato: slå bara första tonen på varje sträng", "V3 Bara nedåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.2.8 15.2.8 13.3.8 15.3.8 12.1.8 15.1.8 |\n15.1.8 12.1.8 15.3.8 13.3.8 15.2.8 12.2.8 15.4.8 13.4.8 |\n13.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.2.8 15.2.8 13.3.8 15.3.8 12.1.8 15.1.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "28", "kap": 2, "titel": "Sicksack: box 1 → 5", "block": "D. Avslutning", "formel": "fyrgrupper: box 1 ↑ · box 2 ↓ · box 3 ↑ · box 4 ↓ · box 5 ↑", "mal": "Byt box på den långa tonen utan att tappa pulsen.", "gor": "Fyrgrupper uppåt i box 1. På den långa tonen flyttar du till box 2 och går nedåt, fortfarande i fyrgrupper. Så växlar riktningen hela vägen till box 5. Varje box spelas bara åt ett håll, så du klättrar uppåt längs halsen i sicksack.", "variationer": ["V1 Utan långa toner: gå direkt vidare till nästa box", "V2 Tregrupper i stället för fyrgrupper", "V3 Tillbaka ned: box 5 → 1"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 6.4.8 3.3.8 5.3.8 3.2.8 |\n3.3.8 5.3.8 3.2.8 5.2.8 5.3.8 3.2.8 5.2.8 3.1.8 |\n3.2.8 5.2.8 3.1.8 5.1.8 5.1.2 |\n7.1.8 5.1.8 8.2.8 5.2.8 5.1.8 8.2.8 5.2.8 8.3.8 |\n8.2.8 5.2.8 8.3.8 5.3.8 5.2.8 8.3.8 5.3.8 8.4.8 |\n8.3.8 5.3.8 8.4.8 6.4.8 6.4.2 |\n8.4.8 10.4.8 8.3.8 10.3.8 10.4.8 8.3.8 10.3.8 8.2.8 |\n8.3.8 10.3.8 8.2.8 10.2.8 10.3.8 8.2.8 10.2.8 7.1.8 |\n8.2.8 10.2.8 7.1.8 10.1.8 10.1.2 |\n12.1.8 10.1.8 12.2.8 10.2.8 10.1.8 12.2.8 10.2.8 13.3.8 |\n12.2.8 10.2.8 13.3.8 10.3.8 10.2.8 13.3.8 10.3.8 13.4.8 |\n13.3.8 10.3.8 13.4.8 10.4.8 10.4.2 |\n13.4.8 15.4.8 13.3.8 15.3.8 15.4.8 13.3.8 15.3.8 12.2.8 |\n13.3.8 15.3.8 12.2.8 15.2.8 15.3.8 12.2.8 15.2.8 12.1.8 |\n12.2.8 15.2.8 12.1.8 15.1.8 15.1.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 6.4.8 3.3.8 5.3.8 3.2.8 |\n7.1.8 5.1.8 8.2.8 5.2.8 5.1.8 8.2.8 5.2.8 8.3.8", "diagram": {"lo": 3, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 15}, {"id": "29", "kap": 3, "titel": "Mollskalan på en sträng", "block": "Intro", "formel": "G A B♭ C D E♭ F G längs E-strängen · band 3 → 15 och tillbaka", "mal": "Se var de nya tonerna ligger mellan boxarna, och hör hela skalan i ett svep.", "gor": "Det här är G-mollskalan: pentatonikens fem toner plus två nya, A och E♭ (blå i greppbilden). Spela den på bara E-strängen, från G på band 3 till G på band 15, och tillbaka. Flytta handen längs halsen och säg tonnamnen högt. Varje box från kapitel 1 börjar på en av de svarta eller röda tonerna (G, B♭, C, D och F). De blå tonerna ligger mellan boxarna. I nästa övning ser du hur de passar in i box 1.", "variationer": ["V1 Samma sak på A-strängen", "V2 Åttondelar i stället för fjärdedelar", "V3 Stanna på varje ton där en box börjar och spela boxen uppåt"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.4 5.4.4 6.4.4 8.4.4 |\n10.4.4 11.4.4 13.4.4 15.4.4 |\n13.4.4 11.4.4 10.4.4 8.4.4 |\n6.4.4 5.4.4 3.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.4 5.4.4 6.4.4 8.4.4", "diagram": {"lo": 3, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 5, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 4}, {"id": "30", "kap": 3, "titel": "Från pentatonik till mollskala", "block": "A. Box 1", "formel": "box 1 som pentatonik · sedan samma box med de nya tonerna A och E♭", "mal": "Hör skillnaden: de nya tonerna fyller i luckorna i pentatoniken.", "gor": "Spela först box 1 som du kan den från kapitel 1. Spela sedan samma box igen, men nu med de nya tonerna, de blå prickarna i greppbilden: A och E♭. Då blir det en G-mollskala, sju olika toner i stället för fem, och vissa strängar får tre toner. En av de nya tonerna ligger ett band utanför boxen: sträck ut handen ett band i stället för att flytta hela handen.", "variationer": ["V1 Bara mollskalan, utan pentatoniken först", "V2 Spela de nya tonerna lite starkare", "V3 Växla: pentatonik upp, mollskala ned"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8 |\n3.1.8 5.2.8 3.2.8 5.3.8 3.3.8 6.4.8 3.4.4 |\n3.4.8 5.4.8 6.4.8 3.3.8 5.3.8 6.3.8 3.2.8 5.2.8 |\n2.1.8 3.1.8 5.1.8 3.1.8 2.1.8 5.2.8 3.2.8 6.3.8 |\n5.3.8 3.3.8 6.4.8 5.4.8 3.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8 |\n3.1.8 5.2.8 3.2.8 5.3.8 3.3.8 6.4.8 3.4.4", "diagram": {"lo": 2, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 5, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 2, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 5}, {"id": "31", "kap": 3, "titel": "Box 1 · upp och ned", "block": "A. Box 1", "formel": "hela mollskalan i boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Hela mollskalan i box 1, från lägsta tonen till högsta och tillbaka. Ett finger per band, även när en sträng har tre toner. En av de nya tonerna ligger ett band utanför boxen: sträck ut handen ett band i stället för att flytta hela handen.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Spela pentatonikboxen först, sedan mollskalan"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.3.8 6.3.8 3.2.8 5.2.8 |\n2.1.8 3.1.8 5.1.8 3.1.8 2.1.8 5.2.8 3.2.8 6.3.8 |\n5.3.8 3.3.8 6.4.8 5.4.8 3.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.3.8 6.3.8 3.2.8 5.2.8", "diagram": {"lo": 2, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 5, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 2, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "32", "kap": 3, "titel": "Box 1 · fyrgrupper", "block": "A. Box 1", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Fyrgrupper som i kapitel 1, men nu med mollskalans sju toner: fyra skaltoner i rad, sedan fyra igen med start en ton högre. Högst upp vänder du och gör samma sak nedåt.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.4.8 6.4.8 3.3.8 5.3.8 |\n6.4.8 3.3.8 5.3.8 6.3.8 3.3.8 5.3.8 6.3.8 3.2.8 |\n5.3.8 6.3.8 3.2.8 5.2.8 6.3.8 3.2.8 5.2.8 2.1.8 |\n3.2.8 5.2.8 2.1.8 3.1.8 5.2.8 2.1.8 3.1.8 5.1.8 |\n5.1.8 3.1.8 2.1.8 5.2.8 3.1.8 2.1.8 5.2.8 3.2.8 |\n2.1.8 5.2.8 3.2.8 6.3.8 5.2.8 3.2.8 6.3.8 5.3.8 |\n3.2.8 6.3.8 5.3.8 3.3.8 6.3.8 5.3.8 3.3.8 6.4.8 |\n5.3.8 3.3.8 6.4.8 5.4.8 3.3.8 6.4.8 5.4.8 3.4.8 |\n3.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.4.8 6.4.8 3.3.8 5.3.8", "diagram": {"lo": 2, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 5, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 2, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 9}, {"id": "33", "kap": 3, "titel": "Box 2 · upp och ned", "block": "B. Box 2", "formel": "hela mollskalan i boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Samma sak som i övning 31, nu i box 2. Leta först upp de blå prickarna, de nya tonerna, i greppbilden. Resten av boxen känner du igen från kapitel 1.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Spela pentatonikboxen först, sedan mollskalan"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 6.3.8 8.3.8 5.2.8 7.2.8 8.2.8 |\n5.1.8 7.1.8 5.1.8 8.2.8 7.2.8 5.2.8 8.3.8 6.3.8 |\n5.3.8 8.4.8 6.4.2 {d}\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 6.3.8 8.3.8 5.2.8 7.2.8 8.2.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 7, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "34", "kap": 3, "titel": "Box 2 · fyrgrupper", "block": "B. Box 2", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 32, nu i box 2.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 6.3.8 8.4.8 5.3.8 6.3.8 8.3.8 |\n5.3.8 6.3.8 8.3.8 5.2.8 6.3.8 8.3.8 5.2.8 7.2.8 |\n8.3.8 5.2.8 7.2.8 8.2.8 5.2.8 7.2.8 8.2.8 5.1.8 |\n7.2.8 8.2.8 5.1.8 7.1.8 7.1.8 5.1.8 8.2.8 7.2.8 |\n5.1.8 8.2.8 7.2.8 5.2.8 8.2.8 7.2.8 5.2.8 8.3.8 |\n7.2.8 5.2.8 8.3.8 6.3.8 5.2.8 8.3.8 6.3.8 5.3.8 |\n8.3.8 6.3.8 5.3.8 8.4.8 6.3.8 5.3.8 8.4.8 6.4.8 |\n6.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 6.4.8 8.4.8 5.3.8 6.3.8 8.4.8 5.3.8 6.3.8 8.3.8", "diagram": {"lo": 5, "hi": 8, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 7, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 8}, {"id": "35", "kap": 3, "titel": "Box 3 · upp och ned", "block": "C. Box 3", "formel": "hela mollskalan i boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Samma sak som i övning 31, nu i box 3. Leta först upp de blå prickarna, de nya tonerna, i greppbilden. Resten av boxen känner du igen från kapitel 1. En av de nya tonerna ligger ett band utanför boxen: sträck ut handen ett band i stället för att flytta hela handen.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Spela pentatonikboxen först, sedan mollskalan"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 11.4.8 8.3.8 10.3.8 7.2.8 8.2.8 10.2.8 |\n7.1.8 8.1.8 10.1.8 8.1.8 7.1.8 10.2.8 8.2.8 7.2.8 |\n10.3.8 8.3.8 11.4.8 10.4.8 8.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 11.4.8 8.3.8 10.3.8 7.2.8 8.2.8 10.2.8", "diagram": {"lo": 7, "hi": 11, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 7, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 8, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "36", "kap": 3, "titel": "Box 3 · fyrgrupper", "block": "C. Box 3", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 32, nu i box 3.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 11.4.8 8.3.8 10.4.8 11.4.8 8.3.8 10.3.8 |\n11.4.8 8.3.8 10.3.8 7.2.8 8.3.8 10.3.8 7.2.8 8.2.8 |\n10.3.8 7.2.8 8.2.8 10.2.8 7.2.8 8.2.8 10.2.8 7.1.8 |\n8.2.8 10.2.8 7.1.8 8.1.8 10.2.8 7.1.8 8.1.8 10.1.8 |\n10.1.8 8.1.8 7.1.8 10.2.8 8.1.8 7.1.8 10.2.8 8.2.8 |\n7.1.8 10.2.8 8.2.8 7.2.8 10.2.8 8.2.8 7.2.8 10.3.8 |\n8.2.8 7.2.8 10.3.8 8.3.8 7.2.8 10.3.8 8.3.8 11.4.8 |\n10.3.8 8.3.8 11.4.8 10.4.8 8.3.8 11.4.8 10.4.8 8.4.8 |\n8.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 8.4.8 10.4.8 11.4.8 8.3.8 10.4.8 11.4.8 8.3.8 10.3.8", "diagram": {"lo": 7, "hi": 11, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 7, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 8, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 9}, {"id": "37", "kap": 3, "titel": "Box 4 · upp och ned", "block": "D. Box 4", "formel": "hela mollskalan i boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Samma sak som i övning 31, nu i box 4. Leta först upp de blå prickarna, de nya tonerna, i greppbilden. Resten av boxen känner du igen från kapitel 1.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Spela pentatonikboxen först, sedan mollskalan"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 11.4.8 13.4.8 10.3.8 12.3.8 13.3.8 10.2.8 12.2.8 |\n13.2.8 10.1.8 12.1.8 10.1.8 13.2.8 12.2.8 10.2.8 13.3.8 |\n12.3.8 10.3.8 13.4.8 11.4.8 10.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 11.4.8 13.4.8 10.3.8 12.3.8 13.3.8 10.2.8 12.2.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 12, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 13, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "38", "kap": 3, "titel": "Box 4 · fyrgrupper", "block": "D. Box 4", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 32, nu i box 4.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 11.4.8 13.4.8 10.3.8 11.4.8 13.4.8 10.3.8 12.3.8 |\n13.4.8 10.3.8 12.3.8 13.3.8 10.3.8 12.3.8 13.3.8 10.2.8 |\n12.3.8 13.3.8 10.2.8 12.2.8 13.3.8 10.2.8 12.2.8 13.2.8 |\n10.2.8 12.2.8 13.2.8 10.1.8 12.2.8 13.2.8 10.1.8 12.1.8 |\n12.1.8 10.1.8 13.2.8 12.2.8 10.1.8 13.2.8 12.2.8 10.2.8 |\n13.2.8 12.2.8 10.2.8 13.3.8 12.2.8 10.2.8 13.3.8 12.3.8 |\n10.2.8 13.3.8 12.3.8 10.3.8 13.3.8 12.3.8 10.3.8 13.4.8 |\n12.3.8 10.3.8 13.4.8 11.4.8 10.3.8 13.4.8 11.4.8 10.4.8 |\n10.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 10.4.8 11.4.8 13.4.8 10.3.8 11.4.8 13.4.8 10.3.8 12.3.8", "diagram": {"lo": 10, "hi": 13, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 12, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 13, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 9}, {"id": "39", "kap": 3, "titel": "Box 5 · upp och ned", "block": "E. Box 5", "formel": "hela mollskalan i boxen upp · ned till starttonen", "mal": "Jämna åttondelar, ett finger per band, växelfingrar (pek–lång).", "gor": "Samma sak som i övning 31, nu i box 5. Leta först upp de blå prickarna, de nya tonerna, i greppbilden. Resten av boxen känner du igen från kapitel 1.", "variationer": ["V1 Legato: slå bara första tonen på varje sträng", "V2 Swing (långt–kort)", "V3 Spela pentatonikboxen först, sedan mollskalan"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.3.8 13.3.8 15.3.8 12.2.8 13.2.8 15.2.8 |\n12.1.8 14.1.8 15.1.8 14.1.8 12.1.8 15.2.8 13.2.8 12.2.8 |\n15.3.8 13.3.8 12.3.8 15.4.8 13.4.2\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.3.8 13.3.8 15.3.8 12.2.8 13.2.8 15.2.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 12, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 13, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 14, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 3}, {"id": "40", "kap": 3, "titel": "Box 5 · fyrgrupper", "block": "E. Box 5", "formel": "1 2 3 4 · 2 3 4 5 · 3 4 5 6 · …  (sedan samma sak nedåt)", "mal": "Jämna åttondelar, strikt växelfingrar (pek–lång). Accent på första tonen i varje grupp.", "gor": "Samma mönster som i övning 32, nu i box 5.", "variationer": ["V1 Swing", "V2 Bara nedåt", "V3 Accent på sista tonen i varje grupp i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.3.8 13.3.8 15.4.8 12.3.8 13.3.8 15.3.8 |\n12.3.8 13.3.8 15.3.8 12.2.8 13.3.8 15.3.8 12.2.8 13.2.8 |\n15.3.8 12.2.8 13.2.8 15.2.8 12.2.8 13.2.8 15.2.8 12.1.8 |\n13.2.8 15.2.8 12.1.8 14.1.8 15.2.8 12.1.8 14.1.8 15.1.8 |\n15.1.8 14.1.8 12.1.8 15.2.8 14.1.8 12.1.8 15.2.8 13.2.8 |\n12.1.8 15.2.8 13.2.8 12.2.8 15.2.8 13.2.8 12.2.8 15.3.8 |\n13.2.8 12.2.8 15.3.8 13.3.8 12.2.8 15.3.8 13.3.8 12.3.8 |\n15.3.8 13.3.8 12.3.8 15.4.8 13.3.8 12.3.8 15.4.8 13.4.8 |\n13.4.1\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 13.4.8 15.4.8 12.3.8 13.3.8 15.4.8 12.3.8 13.3.8 15.3.8", "diagram": {"lo": 12, "hi": 15, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 12, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 13, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 14, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 9}, {"id": "41", "kap": 3, "titel": "Formkedjan: mollskalan box 1 → 5 → 1", "block": "F. Avslutning", "formel": "box 1 upp · box 2 upp · … · box 1 igen (tolv band upp)", "mal": "Byt box på den långa tonen. Hitta de nya tonerna i varje box.", "gor": "Samma kedja som i övning 12, men med mollskalan. Spela varje box uppåt och flytta till nästa. Efter box 5 kommer box 1 igen, en oktav högre.", "variationer": ["V1 Hela vägen ned igen (box 1 → 5 baklänges)", "V2 Spela bara grundtonerna i varje box", "V3 Fyrgrupper i varje box i stället"], "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.3.8 6.3.8 3.2.8 5.2.8 |\n2.1.8 3.1.8 5.1.2 {d} |\n6.4.8 8.4.8 5.3.8 6.3.8 8.3.8 5.2.8 7.2.8 8.2.8 |\n5.1.8 7.1.8 7.1.2 {d} |\n8.4.8 10.4.8 11.4.8 8.3.8 10.3.8 7.2.8 8.2.8 10.2.8 |\n7.1.8 8.1.8 10.1.2 {d} |\n10.4.8 11.4.8 13.4.8 10.3.8 12.3.8 13.3.8 10.2.8 12.2.8 |\n13.2.8 10.1.8 12.1.2 {d} |\n13.4.8 15.4.8 12.3.8 13.3.8 15.3.8 12.2.8 13.2.8 15.2.8 |\n12.1.8 14.1.8 15.1.2 {d} |\n15.4.8 17.4.8 18.4.8 15.3.8 17.3.8 18.3.8 15.2.8 17.2.8 |\n14.1.8 15.1.8 17.1.2 {d}\n\\track \"Bordun\" { instrument 48 volume 7 }\n\\staff {score}\n(G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1 | (G3 D4).1", "cell": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 5.4.8 6.4.8 3.3.8 5.3.8 6.3.8 3.2.8 5.2.8 |\n2.1.8 3.1.8 5.1.2 {d}", "diagram": {"lo": 2, "hi": 18, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 5, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 0, "f": 8, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 0, "f": 10, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 0, "f": 11, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 0, "f": 13, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 0, "f": 15, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 17, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 0, "f": 18, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 6, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 1, "f": 8, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 1, "f": 10, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 1, "f": 12, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 1, "f": 13, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 15, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 17, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 1, "f": 18, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 2, "f": 7, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 2, "f": 8, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 2, "f": 10, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 2, "f": 12, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 13, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 2, "f": 15, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 17, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 2, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 3, "f": 7, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 3, "f": 8, "rot": false, "iv": "♭6", "namn": "E♭", "ny": true}, {"s": 3, "f": 10, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 3, "f": 12, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 14, "rot": false, "iv": "2", "namn": "A", "ny": true}, {"s": 3, "f": 15, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 17, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "tempo": [50, 60, 70, 80, 90, 100, 160], "takter": 12}], "start": [{"id": "valkommen", "rubrik": "Välkommen", "text": "<p>Teknikkorten är korta övningar som bygger på varandra. Du tar <strong>ett kort i taget, i ordning</strong>, och övar några minuter om dagen, gärna som uppvärmning.</p><ul><li><strong>Aldrig spelat?</strong> Börja på kort F1.</li><li><strong>Spelat lite?</strong> Börja direkt på kort 1.</li></ul><p>Den här sidan förklarar allt du ser på korten. Läs den en gång, och kom tillbaka hit när något känns oklart.</p>"}, {"id": "sidan", "rubrik": "Sidan och menyn", "text": "<ul><li><strong>Menyn</strong> till vänster visar alla kort. På mobilen finns den som en lista högst upp.</li><li>Korten är ordnade i <strong>kapitel</strong> och <strong>block</strong>. Varje block har en egen färg. Pilen vid en rubrik fäller ihop eller ut den.</li><li>Övningarna är <strong>numrerade i ordning</strong>: 1, 2, 3 … Förberedelsen för helt nya nybörjare heter F1–F5.</li><li>Knapparna <strong>Gitarr / Elbas</strong> högst upp byter instrument. Du är på elbassidan.</li><li>När du är klar med ett kort får det en <strong>grön bock ✓</strong> i menyn, och rubrikerna räknar hur många du har klarat (till exempel 2/5).</li><li>Bockarna sparas <strong>bara i den här webbläsaren</strong>. På en annan dator eller telefon syns de inte.</li><li>Sidan <strong>samlar inte in några uppgifter</strong> om dig. Det finns inga konton, och inget skickas någonstans.</li></ul>"}, {"id": "instrumentet", "rubrik": "Instrumentet", "text": "<p>Elbasen har <strong>4 strängar</strong>. Från den tjockaste till den tunnaste heter de <strong>E, A, D, G</strong>. När du håller instrumentet är den tjockaste strängen, E, överst, närmast ansiktet.</p><ul><li><strong>Banden</strong> är metallpinnarna på halsen. Band 1 är närmast huvudet, där stämskruvarna sitter. Du trycker ned strängen precis bakom bandet.</li><li>En <strong>öppen sträng</strong> (band 0) betyder att du spelar strängen utan att trycka ned den.</li><li>Vänsterhandens fingrar har nummer: <strong>1 = pekfinger, 2 = långfinger, 3 = ringfinger, 4 = lillfinger</strong>.</li><li><strong>Ett finger per band</strong>: inom en box tar varje finger sitt eget band. Står handen vid band 3 tar pekfingret band 3, långfingret band 4 och så vidare.</li><li>Du slår an strängarna med <strong>pekfingret och långfingret växelvis</strong>: pek, lång, pek, lång … hela tiden, också när du byter sträng. Det kallas <strong>växelfingrar</strong>. Vill du spela med plektrum går det också: då gäller ned, upp, ned, upp.</li></ul>"}, {"id": "greppbild", "rubrik": "Greppbilden", "text": "<p>Greppbilden visar <strong>var på halsen</strong> du ska spela. Den ritas som när du lutar dig fram och tittar ned på halsen medan du spelar. Därför ligger den tjockaste strängen <strong>längst ned</strong> i bilden, fast den är överst när du håller instrumentet.</p><ul><li>De vågräta linjerna är <strong>strängarna</strong>. Strängarnas namn står till vänster.</li><li>De lodräta linjerna är <strong>banden</strong>. Bandnumret står under.</li><li>En <strong>prick</strong> är en ton du ska spela. En <strong>vit ring</strong> är en öppen sträng. En <strong>blå prick</strong> är en ny ton som inte fanns i boxen förut (från kapitel 3).</li><li><strong>R</strong> (orange) är <strong>grundtonen</strong>, tonen som låter \"hemma\". I de här korten är grundtonen G.</li><li>Vissa bandnummer är <strong>fetstilta</strong> (3, 5, 7, 9, 12 …). Det är banden som har en markering, en prick, på halsen. De hjälper dig att hitta rätt.</li></ul><p>Med knapparna uppe till höger kan du byta vad som står i prickarna:</p><ul><li><strong>R / o</strong> visar bara grundtonerna. Börja med det läget.</li><li><strong>Intervaller</strong> visar varje tons avstånd från grundtonen (R, ♭3, 4, 5, ♭7). Det kommer vi till senare.</li><li><strong>Tonnamn</strong> visar vad tonerna heter: G, B♭, C, D och F. Tecknet ♭ betyder en halvton (ett band) lägre: B♭ ligger ett band under B.</li></ul>", "exempel": {"typ": "diagram", "diagram": {"lo": 3, "hi": 6, "strangar": ["E", "A", "D", "G"], "toner": [{"s": 0, "f": 3, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 0, "f": 6, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 1, "f": 3, "rot": false, "iv": "4", "namn": "C", "ny": false}, {"s": 1, "f": 5, "rot": false, "iv": "5", "namn": "D", "ny": false}, {"s": 2, "f": 3, "rot": false, "iv": "♭7", "namn": "F", "ny": false}, {"s": 2, "f": 5, "rot": true, "iv": "R", "namn": "G", "ny": false}, {"s": 3, "f": 3, "rot": false, "iv": "♭3", "namn": "B♭", "ny": false}, {"s": 3, "f": 5, "rot": false, "iv": "4", "namn": "C", "ny": false}], "las": null}, "text": "Box 1 i G-mollpentatonik, den första boxen du lär dig. Prova knapparna."}}, {"id": "tabb", "rubrik": "Tabulatur (tabb)", "text": "<p>Tabben visar <strong>vilken sträng och vilket band</strong> du ska spela, i rätt ordning.</p><ul><li>Linjerna är strängarna, precis som i greppbilden: <strong>översta linjen är den tunnaste strängen</strong>, nedersta är den tjockaste, E.</li><li>Siffran på en linje säger <strong>vilket band</strong> du ska trycka ned. <strong>0</strong> betyder öppen sträng.</li><li>Du läser från <strong>vänster till höger</strong>, en siffra i taget.</li><li>Strecken under siffrorna visar <strong>rytmen</strong>, alltså hur långa tonerna är. På korten ser du rytmen tydligast i noterna ovanför tabben (se nästa avsnitt).</li></ul>", "exempel": {"typ": "tex", "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.8 6.4.8 3.3.8 5.3.8 3.2.8 5.2.8 3.1.8 5.1.8", "text": "De åtta första tonerna i box 1: två toner på varje sträng, nedifrån och upp."}}, {"id": "noter", "rubrik": "Noter och rytm", "text": "<p>Du behöver inte kunna läsa noter för att spela korten. Tabben räcker för att veta <em>vilka</em> toner du ska spela. Men noterna visar <strong>rytmen</strong>, alltså <em>när</em> och <em>hur länge</em> varje ton ska låta.</p><ul><li>Noterna står på fem linjer. Tecknet först på raden är en <strong>F-klav (basklav)</strong>. Sedan kommer <strong>förtecknet</strong> (två ♭) som visar tonarten, G-moll.</li><li><strong>4/4</strong> betyder fyra slag i varje <strong>takt</strong>. Takterna skiljs åt av lodräta <strong>taktstreck</strong>. Den lilla röda siffran är taktens nummer.</li><li><strong>Helnot</strong>: håll tonen i fyra slag. <strong>Halvnot</strong>: två slag. <strong>Fjärdedel</strong>: ett slag.</li><li><strong>Åttondelar</strong>: två toner på varje slag. De sitter ofta ihop med ett streck, en balk. Räkna \"1 och 2 och 3 och 4 och\".</li><li><strong>Trioler</strong>: tre toner på varje slag, markerade med en 3:a. Räkna \"tri-o-la, tri-o-la\".</li><li>En <strong>paus</strong> betyder att du är tyst så länge pausen varar.</li></ul>", "exempel": {"typ": "tex", "tex": "\\tempo 80\n\\track \"Elbas\" { instrument 33 }\n\\staff {score tabs}\n\\tuning (G2 D2 A1 E1)\n\\clef F4 \\ks Bb 3.4.1 {txt \"hel\"} |\n3.4.2 {txt \"halv\"} 3.4.2 |\n3.4.4 {txt \"fjärdedel\"} 3.4.4 3.4.4 3.4.4 |\n3.4.8 {txt \"åttondelar\"} 3.4.8 3.4.8 3.4.8 3.4.8 3.4.8 3.4.8 3.4.8 |\n3.4.8 {tu 3 txt \"trioler\"} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} 3.4.8 {tu 3} |\n3.4.4 {txt \"paus\"} r.4 r.2", "text": "Samma ton, G, med olika notvärden. Noterna står ovanför, tabben under."}}, {"id": "puls", "rubrik": "Puls, BPM och metronom", "text": "<ul><li><strong>Pulsen</strong> är de jämna slagen i musiken, de du stampar takten till.</li><li><strong>BPM</strong> betyder <em>beats per minute</em>, slag per minut. <strong>♩ = 60</strong> betyder 60 slag per minut, alltså ett slag i sekunden. Högre tal går snabbare.</li><li>En <strong>metronom</strong> klickar på varje slag, så att du håller tempot jämnt. Första slaget i varje takt låter lite annorlunda.</li><li>Att spela <strong>jämnt</strong> i ett lugnt tempo är viktigare än att spela fort.</li></ul>", "exempel": {"typ": "metronom", "text": "Prova att lyssna på några olika tempon. Klappa eller räkna med."}}, {"id": "kortet", "rubrik": "Kortets delar", "text": "<p>Alla kort ser likadana ut. Uppifrån och ned:</p><ul><li><strong>Nummer, namn och block</strong> högst upp.</li><li><strong>Cellen</strong> är övningens grundidé, i siffror och som första takten i noter. Siffrorna är tonerna i boxen räknat nedifrån: 1 är lägsta tonen. \"1 2 3 4 · 2 3 4 5\" betyder fyra toner uppåt, och sedan fyra toner uppåt igen men med start en ton högre. Förstår du cellen har du förstått övningen.</li><li><strong>Greppbild</strong>: var på halsen du spelar.</li><li><strong>Hela övningen</strong> i noter och tabb.</li><li><strong>Mål</strong>: vad du ska tänka på.</li><li><strong>Så gör du</strong>: hur du spelar övningen, steg för steg.</li><li><strong>Variationer</strong> (V1, V2, V3): nya sätt att spela samma övning när den sitter.</li><li><strong>Tempotrappan</strong>: börja på det lägsta tempot. Kryssa i rutan när du kan spela kortet <strong>tre gånger i rad utan att stanna</strong>. Gå sedan upp ett steg.</li><li><strong>Klar-knappen</strong>: tryck när övningen sitter. Kortet får en bock i menyn, och du kan gå vidare till nästa kort.</li></ul>"}, {"id": "spelaren", "rubrik": "Spelaren", "text": "<p>Längst ned på varje kort finns spelaren. Med den kan du lyssna på övningen och spela med.</p><ul><li><strong>▶</strong> spelar och pausar. Du kan också trycka på mellanslag. <strong>■</strong> stoppar och går tillbaka till början.</li><li><strong>− och +</strong> ändrar tempot fem slag i taget. Siffrorna bredvid är tempotrappans steg.</li><li><strong>Metronom</strong> slår på och av klicket.</li><li><strong>Inräkning</strong> ger en takt med klick innan musiken börjar, så att du hinner göra dig redo.</li><li><strong>Loop</strong> spelar övningen om och om igen.</li><li><strong>Bordun</strong> är en låg ton (G och D) som ligger kvar och klingar. Då hör du tonarten och vilken ton som låter \"hemma\".</li><li>Klicka på en not i övningen för att börja spela därifrån. Den färgade markören visar var du är.</li><li>Första gången du trycker ▶ kan ljudet behöva några sekunder för att laddas.</li></ul>"}, {"id": "utskrift", "rubrik": "Skriva ut", "text": "<p>Knappen <strong>Skriv ut</strong> i spelaren ger kortet på ett A4. Bockar och uppspelning finns bara på skärmen, så kryssa i tempotrappan med penna på papperet.</p>"}, {"id": "ova", "rubrik": "Så övar du", "text": "<ul><li><strong>Några minuter varje dag</strong> är bättre än en lång stund en gång i veckan.</li><li><strong>Långsamt först.</strong> Spela rätt innan du spelar fort.</li><li><strong>Spela med metronomen.</strong> Öka tempot ett steg i taget.</li><li><strong>Håll handen avslappnad.</strong> Gör det ont eller känns spänt: ta en paus.</li><li>Lyssna på dig själv. Låter tonerna jämnt och rent?</li></ul>"}]};
+const AT = 'lib/alphatab/';
+const GRUNDTEMPO = 80; // \tempo i alla övningar; spelhastigheten räknas om från detta
+const $ = s => document.querySelector(s);
+const INST = DATA.instrument;
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('tk:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('tk:' + k, JSON.stringify(v)); } catch (e) {} },
+};
+
+const kort = DATA.kort;
+const blockkod = k => /^[A-F]\./.test(k.block) ? k.block[0] : '0';
+const byId = Object.fromEntries(kort.map(k => [k.id, k]));
+const opts = Object.assign({ metronom: true, inrakning: false, loop: true, bordun: true, diag: 'ro' }, store.get('opts', {}));
+let current = null, bpm = 60, ready = false, playing = false, tillToppen = false;
+history.scrollRestoration = 'manual';
+
+/* ---------- alphaTab ---------- */
+const NE = alphaTab.NotationElement;
+const dolda = () => new Map([[NE.EffectDynamics, false], [NE.GuitarTuning, false], [NE.TrackNames, false], [NE.EffectTempo, false]]);
+const smal = () => window.innerWidth < 600;
+
+const main = new alphaTab.AlphaTabApi($('#main-at'), {
+  core: { fontDirectory: AT + 'font/', enableLazyLoading: false },
+  notation: { elements: dolda() },
+  display: { scale: smal() ? 0.8 : 1 },
+  player: { enablePlayer: true, enableCursor: true, enableUserInteraction: true, soundFont: AT + 'soundfont/sonivox.sf2', scrollMode: alphaTab.ScrollMode.Off, scrollOffsetY: -120 },
+});
+const cell = new alphaTab.AlphaTabApi($('#cell-at'), {
+  core: { fontDirectory: AT + 'font/', enableLazyLoading: false },
+  notation: { elements: dolda() },
+  display: { scale: 0.8 },
+  player: { enablePlayer: false, scrollMode: alphaTab.ScrollMode.Off },
+});
+
+main.soundFontLoad.on(e => { if (e.total) status(`Laddar ljud … ${Math.round(e.loaded / e.total * 100)} %`); });
+main.playerReady.on(() => { ready = true; status('Redo – tryck ▶ (eller mellanslag)'); updatePlay(); applyOpts(); });
+main.playerStateChanged.on(e => {
+  playing = e.state === 1;
+  // följ markören bara under uppspelning, annars hoppar sidan när ett kort laddas
+  main.settings.player.scrollMode = playing ? alphaTab.ScrollMode.Continuous : alphaTab.ScrollMode.Off;
+  main.updateSettings();
+  updatePlay();
+});
+main.scoreLoaded.on(() => applyOpts());
+// nytt kort ska alltid börja högst upp, även om alphaTab flyttar sidan medan noterna ritas
+main.postRenderFinished.on(() => {
+  if (!tillToppen) return;
+  tillToppen = false;
+  requestAnimationFrame(() => window.scrollTo(0, 0));
+});
+main.error.on(e => status('Något gick fel: ' + (e && e.message ? e.message : e)));
+
+function status(t) { $('#status').textContent = t; }
+function updatePlay() {
+  const b = $('#play');
+  b.disabled = !ready;
+  b.textContent = playing ? '❚❚' : '▶';
+  b.setAttribute('aria-label', playing ? 'Pausa' : 'Spela');
+}
+
+function applyOpts() {
+  main.metronomeVolume = opts.metronom ? 1 : 0;
+  main.countInVolume = opts.inrakning ? 1 : 0;
+  main.isLooping = opts.loop;
+  main.playbackSpeed = bpm / GRUNDTEMPO;
+  if (main.score && main.score.tracks[1]) {
+    try { main.changeTrackMute([main.score.tracks[1]], !opts.bordun); } catch (e) {}
+  }
+  document.querySelectorAll('.tog').forEach(b => b.setAttribute('aria-pressed', String(!!opts[b.dataset.opt])));
+}
+
+/* ---------- navigering ---------- */
+function buildNav() {
+  const andra = INST === 'gitarr' ? ['bas', 'Elbas'] : ['gitarr', 'Gitarr'];
+  $('#inst-switch').innerHTML = INST === 'gitarr'
+    ? `<a class="on">Gitarr</a><a href="bas.html">Elbas</a>`
+    : `<a href="gitarr.html">Gitarr</a><a class="on">Elbas</a>`;
+  $('#inst-switch').querySelectorAll('a[href]').forEach(a => a.addEventListener('click', () => { a.href = andra[0] + '.html' + location.hash; }));
+
+  // hopfällda kapitel/block sparas per instrument; nycklar som "k1" och "k1|A. Box 1 på djupet"
+  const stangda = new Set(store.get(INST + ':stangda', []));
+  const oppen = nyckel => stangda.has(nyckel) ? '' : ' open';
+  let nav = `<div class="nav-verktyg"><button data-alla="stang">Fäll ihop alla</button><button data-alla="oppna">Fäll ut alla</button></div>`
+    + `<a href="#start" data-id="start" class="nav-item nav-start"><span class="nid">★</span><span class="nt">Start här: så funkar korten</span><span class="prog"></span></a>`;
+  let sel = `<option value="start">★ Start här: så funkar korten</option>`;
+  for (const [kn, kap] of Object.entries(DATA.kapitel)) {
+    nav += `<details class="nav-kap" data-nyckel="k${kn}"${oppen('k' + kn)}><summary><h3><span>Kapitel ${kn}<em class="raknare" data-rakna="k${kn}"></em></span>${kap.titel}</h3></summary><p>${kap.intro}</p>`;
+    sel += `<optgroup label="Kapitel ${kn} · ${kap.titel}">`;
+    let block = null;
+    for (const k of kort.filter(k => String(k.kap) === kn)) {
+      if (k.block !== block) {
+        if (block !== null) nav += '</details>';
+        block = k.block;
+        const nyckel = `k${kn}|${block}`;
+        nav += `<details class="nav-blk" data-nyckel="${nyckel}"${oppen(nyckel)}><summary><h4 class="b${blockkod(k)}">${block}<span class="raknare" data-rakna="${nyckel}"></span></h4></summary>`;
+      }
+      nav += `<a href="#${k.id}" data-id="${k.id}" class="nav-item"><span class="nid">${k.id}</span><span class="nt">${k.titel}</span><span class="prog" data-prog="${k.id}"></span></a>`;
+      sel += `<option value="${k.id}">${k.id}  ${k.titel}</option>`;
+    }
+    if (block !== null) nav += '</details>';
+    nav += '</details>'; sel += '</optgroup>';
+  }
+  $('#nav').innerHTML = nav;
+  const sparaStangda = () => store.set(INST + ':stangda',
+    [...document.querySelectorAll('#nav details:not([open])')].map(d => d.dataset.nyckel));
+  document.querySelectorAll('#nav details').forEach(d => d.addEventListener('toggle', sparaStangda));
+  document.querySelectorAll('.nav-verktyg button').forEach(b => b.onclick = () => {
+    const stang = b.dataset.alla === 'stang';
+    document.querySelectorAll('#nav details').forEach(d => {
+      // vid "fäll ihop alla" hålls blocken öppna inuti, så att ett utfällt kapitel visar sina kort
+      if (d.classList.contains('nav-kap')) d.open = !stang; else d.open = true;
+    });
+  });
+  $('#kortval').innerHTML = sel;
+  $('#kortval').onchange = e => { location.hash = e.target.value; };
+  kort.forEach(updateProg);
+  updateRaknare();
+}
+
+function klar(k, t) { return store.get(`${INST}:${k.id}:${t}`, false); }
+function arKlar(k) { return store.get(`${INST}:klar:${k.id}`, false); }
+function updateProg(k) {
+  const el = document.querySelector(`[data-prog="${k.id}"]`);
+  if (el) el.innerHTML = arKlar(k) ? '<span class="bock" title="Klar">✓</span>'
+    : k.tempo.some(t => klar(k, t)) ? k.tempo.map(t => klar(k, t) ? '●' : '○').join('') : '';
+  const a = document.querySelector(`.nav-item[data-id="${k.id}"]`);
+  if (a) a.classList.toggle('klar', arKlar(k));
+  const o = [...$('#kortval').options].find(o => o.value === k.id);
+  if (o) o.textContent = `${arKlar(k) ? '✓ ' : ''}${k.id}  ${k.titel}`;
+}
+// räknare (3/5) i kapitel- och blockrubrikerna; grönt när allt är klart
+const iGrupp = (k, nyckel) => nyckel.includes('|') ? `k${k.kap}|${k.block}` === nyckel : `k${k.kap}` === nyckel;
+function updateRaknare() {
+  document.querySelectorAll('[data-rakna]').forEach(el => {
+    const grupp = kort.filter(k => iGrupp(k, el.dataset.rakna));
+    const n = grupp.filter(arKlar).length, allt = n === grupp.length;
+    el.textContent = `${allt ? '✓ ' : ''}${n}/${grupp.length}`;
+    el.classList.toggle('allt', allt);
+    el.closest('h3, h4').classList.toggle('allt-klart', allt);
+  });
+}
+
+/* ---------- klar-knappen ---------- */
+function renderKlar() {
+  const k = current, ar = arKlar(k), b = $('#klarknapp');
+  const helaKapitlet = kort.filter(x => x.kap === k.kap).every(arKlar);
+  b.classList.toggle('klar', ar);
+  b.setAttribute('aria-pressed', String(ar));
+  $('#klar-rubrik').textContent = !ar ? `Klar med ${k.id}?` : helaKapitlet ? `Hela kapitel ${k.kap} klart!` : 'Klart! Snyggt jobbat.';
+  $('#klar-under').textContent = ar ? 'Kortet är avbockat. Tryck igen för att ångra.' : 'Tryck här när övningen sitter.';
+  const next = kort[kort.indexOf(k) + 1];
+  $('#klar-nasta').hidden = !(ar && next);
+  if (next) $('#klar-nasta').href = '#' + next.id;
+  $('#k-klarchip').hidden = !ar;
+}
+function firaKlart() {
+  const b = $('#klarknapp');
+  b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cirkel = b.querySelector('.klar-cirkel');
+  const farger = ['#3d7a4b', '#b0502a', '#e9a07f', '#5f7a3a', '#8a6a1f', '#4b6a78', '#7a4b6e'];
+  for (let i = 0; i < 16; i++) {
+    const bit = document.createElement('span'), v = i / 16 * Math.PI * 2, r = 42 + Math.random() * 34;
+    bit.className = 'konfetti';
+    bit.style.cssText = `--dx:${Math.cos(v) * r}px;--dy:${Math.sin(v) * r}px;--rot:${Math.random() * 360}deg;background:${farger[i % farger.length]}`;
+    cirkel.appendChild(bit);
+    setTimeout(() => bit.remove(), 800);
+  }
+}
+$('#klarknapp').onclick = () => {
+  const ny = !arKlar(current);
+  store.set(`${INST}:klar:${current.id}`, ny);
+  renderKlar(); updateProg(current); updateRaknare();
+  if (ny) firaKlart();
+};
+
+/* ---------- vilket läge: kort eller genomgång ---------- */
+function visa(id) {
+  // okänd eller tom adress: där man var senast, annars genomgången (förstagångsbesökare)
+  const mal = byId[id] || id === 'start' ? id : store.get(INST + ':senast', 'start');
+  if (byId[mal]) showCard(mal); else showGuide();
+}
+function markeraMeny(id) {
+  document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('aktiv', a.dataset.id === id));
+  const aktiv = document.querySelector('.nav-item.aktiv'), sb = $('#nav');
+  for (let d = aktiv && aktiv.parentElement; d && d !== sb; d = d.parentElement) if (d.tagName === 'DETAILS') d.open = true;
+  if (aktiv && (aktiv.offsetTop < sb.scrollTop || aktiv.offsetTop > sb.scrollTop + sb.clientHeight - 40)) sb.scrollTop = aktiv.offsetTop - sb.clientHeight / 3;
+  $('#kortval').value = id;
+}
+
+/* ---------- kortet ---------- */
+function showCard(id) {
+  const k = byId[id] || byId[store.get(INST + ':senast', '')] || kort[0];
+  stoppaMetronom();
+  document.body.classList.remove('guidelage');
+  $('#guide').hidden = true;
+  $('#kortvy').hidden = false;
+  current = k;
+  store.set(INST + ':senast', k.id);
+  document.title = `${k.id} ${k.titel} · Teknikkort ${DATA.titel}`;
+
+  $('#k-id').textContent = k.id;
+  $('#k-titel').textContent = k.titel;
+  $('#k-kap').textContent = `${DATA.titel} · Kapitel ${k.kap} · ${DATA.kapitel[k.kap].titel}`;
+  const blk = $('#k-block'); blk.textContent = k.block; blk.className = 'badge b' + blockkod(k);
+  $('#k-formel').textContent = k.formel;
+  $('#k-mal').textContent = k.mal;
+  $('#k-gor').textContent = k.gor;
+  $('#k-var').innerHTML = k.variationer.map(v => `<li>${v}</li>`).join('');
+
+  $('#k-trappa').innerHTML = k.tempo.map(t =>
+    `<label class="${klar(k, t) ? 'klar' : ''}"><input type="checkbox" data-t="${t}" ${klar(k, t) ? 'checked' : ''}> ♩ ${t}</label>`).join('');
+  $('#k-trappa').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    store.set(`${INST}:${k.id}:${inp.dataset.t}`, inp.checked);
+    inp.parentElement.classList.toggle('klar', inp.checked);
+    updateProg(k);
+  });
+
+  const i = kort.indexOf(k), prev = kort[i - 1], next = kort[i + 1];
+  $('#prev').hidden = !prev; if (prev) { $('#prev').href = '#' + prev.id; $('#prev').textContent = `← ${prev.id} ${prev.titel}`; }
+  $('#next').hidden = !next; if (next) { $('#next').href = '#' + next.id; $('#next').textContent = `${next.id} ${next.titel} →`; }
+
+  markeraMeny(k.id);
+
+  renderKlar();
+  renderDiagram();
+  bpm = k.tempo[0];
+  renderTempo();
+
+  main.stop();
+  const tex = opts.bordun ? k.tex : k.tex.replace('volume 7 }', 'volume 7 mute }');
+  tillToppen = true;
+  main.tex(tex, [0]);
+  cell.tex(k.cell, [0]);
+  window.scrollTo(0, 0);
+}
+
+/* ---------- tempo ---------- */
+function renderTempo() {
+  $('#bpm').textContent = `♩ = ${bpm}`;
+  $('#chips').innerHTML = current.tempo.map(t => `<button class="chip ${t === bpm ? 'on' : ''}" data-t="${t}">${t}</button>`).join(' ');
+  $('#chips').querySelectorAll('.chip').forEach(c => c.onclick = () => setBpm(+c.dataset.t));
+}
+function setBpm(v) {
+  bpm = Math.max(30, Math.min(220, v));
+  main.playbackSpeed = bpm / GRUNDTEMPO;
+  renderTempo();
+}
+
+/* ---------- greppbild ---------- */
+function renderDiagram() {
+  const d = current.diagram;
+  const mode = d.las || opts.diag;
+  $('#diag-seg').style.visibility = d.las ? 'hidden' : 'visible';
+  $('#diag-seg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  const { svg, n } = greppbildSvg(d, mode);
+  $('#diagram').innerHTML = svg + (d.toner.some(t => t.ny)
+    ? '<p class="diagram-not"><span class="ny-prick"></span>blå = nya toner</p>' : '');
+  // breda greppbilder (t.ex. formkedjan) får en egen rad
+  document.querySelector('.grid2').classList.toggle('bred', n > 8);
+}
+
+function greppbildSvg(d, mode) {
+  const harOppen = d.lo === 0;
+  const start = harOppen ? 1 : d.lo;
+  const slut = Math.max(d.hi, start + 3);
+  const n = slut - start + 1;
+  const S = d.strangar.length;
+  const fw = 46, ss = 28, left = harOppen ? 62 : 34, top = 18;
+  const w = left + n * fw + 14, h = top + (S - 1) * ss + 40;
+  const y = s => top + (S - 1 - s) * ss;
+  const x = f => f === 0 ? left - 22 : left + (f - start + 0.5) * fw;
+
+  let g = '';
+  for (let s = 0; s < S; s++) {
+    g += `<line x1="${left}" y1="${y(s)}" x2="${left + n * fw}" y2="${y(s)}" stroke="#b9ae9c" stroke-width="${1 + (S - 1 - s) * 0.3}"/>`;
+    g += `<text x="${harOppen ? left - 44 : left - 16}" y="${y(s) + 4}" font-size="12" fill="#6f675c" text-anchor="middle" font-weight="600">${d.strangar[s]}</text>`;
+  }
+  for (let k = 0; k <= n; k++) {
+    const nut = harOppen && k === 0;
+    g += `<line x1="${left + k * fw}" y1="${top - 6}" x2="${left + k * fw}" y2="${y(0) + 6}" stroke="${nut ? '#1f1c18' : '#d6ccbc'}" stroke-width="${nut ? 5 : 1.5}"/>`;
+  }
+  for (let f = start; f <= slut; f++) {
+    const markerad = [3, 5, 7, 9, 12, 15, 17].includes(f);
+    g += `<text x="${x(f)}" y="${y(0) + 26}" font-size="12" text-anchor="middle" fill="${markerad ? '#1f1c18' : '#a39a8c'}" font-weight="${markerad ? 700 : 500}">${f}</text>`;
+  }
+  for (const t of d.toner) {
+    const label = mode === 'ro' ? (t.rot ? 'R' : '') : mode === 'iv' ? t.iv : t.namn;
+    const cx = x(t.f), cy = y(t.s);
+    const fill = t.rot ? 'var(--accent)' : t.ny ? 'var(--ny)' : (t.f === 0 ? '#fff' : '#1f1c18');
+    const stroke = t.f === 0 && !t.rot ? '#1f1c18' : 'none';
+    const textFill = t.f === 0 && !t.rot ? '#1f1c18' : '#fff';
+    g += `<circle cx="${cx}" cy="${cy}" r="11.5" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    if (label) g += `<text x="${cx}" y="${cy + 4}" font-size="${label.length > 2 ? 9.5 : 11.5}" text-anchor="middle" fill="${textFill}" font-weight="700">${label}</text>`;
+  }
+  const svg = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Greppbild" style="max-width:${w * 1.15}px;font-family:Inter,system-ui,sans-serif">${g}</svg>`;
+  return { svg, n };
+}
+
+/* ---------- start här: genomgång av allt på sidan ---------- */
+let guideByggd = false, metroCtx = null, metro = null;
+function showGuide() {
+  main.stop();
+  document.body.classList.add('guidelage');
+  $('#kortvy').hidden = true;
+  $('#guide').hidden = false;
+  store.set(INST + ':senast', 'start');
+  document.title = `Start här · Teknikkort ${DATA.titel}`;
+  markeraMeny('start');
+  if (!guideByggd) { byggGuide(); guideByggd = true; }
+  window.scrollTo(0, 0);
+}
+function byggGuide() {
+  const sek = DATA.start, forstaOvning = kort.find(k => k.kap === 1) || kort[0];
+  $('#guide').innerHTML = `
+    <div class="kort-head">
+      <div class="kort-id start-id">Start</div>
+      <div><div class="kap">${DATA.titel} · Innan du börjar</div><h1>Så funkar korten</h1></div>
+      <span class="utskrift-adress">${DATA.doman || ''}</span>
+    </div>
+    <nav class="guide-toc">${sek.map(s => `<button data-mal="g-${s.id}">${s.rubrik}</button>`).join('')}</nav>
+    ${sek.map((s, i) => `<section class="panel guide-sek" id="g-${s.id}">
+      <h2 class="guide-rubrik"><span>${i + 1}</span>${s.rubrik}</h2>
+      <div class="guide-text">${s.text}</div>
+      ${s.exempel ? `<figure class="guide-ex" data-ex="${i}"><div class="guide-ex-yta"></div><figcaption>${s.exempel.text}</figcaption></figure>` : ''}
+    </section>`).join('')}
+    <div class="guide-start">
+      <a class="klar-nasta" href="#${kort[0].id}">Aldrig spelat? Börja på ${kort[0].id} →</a>
+      <a class="klar-nasta alt" href="#${forstaOvning.id}">Spelat lite? Börja på ${forstaOvning.id} →</a>
+    </div>`;
+  $('#guide').querySelectorAll('.guide-toc button').forEach(b => b.onclick = () =>
+    document.getElementById(b.dataset.mal).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  $('#guide').querySelectorAll('.guide-ex').forEach(fig => {
+    const ex = sek[+fig.dataset.ex].exempel, yta = fig.querySelector('.guide-ex-yta');
+    if (ex.typ === 'diagram') guideGreppbild(yta, ex.diagram, 'ro');
+    else if (ex.typ === 'metronom') metronomWidget(yta);
+    else if (ex.typ === 'tex') new alphaTab.AlphaTabApi(yta, {
+      core: { fontDirectory: AT + 'font/', enableLazyLoading: false },
+      notation: { elements: dolda() },
+      display: { scale: smal() ? 0.8 : 0.95 },
+      player: { enablePlayer: false, scrollMode: alphaTab.ScrollMode.Off },
+    }).tex(ex.tex, [0]);
+  });
+}
+function guideGreppbild(yta, d, mode) {
+  yta.innerHTML = `<div class="diagram-head"><div class="seg">${[['ro', 'R / o'], ['iv', 'Intervaller'], ['namn', 'Tonnamn']]
+    .map(([m, t]) => `<button data-mode="${m}" class="${m === mode ? 'on' : ''}">${t}</button>`).join('')}</div></div>${greppbildSvg(d, mode).svg}`;
+  yta.querySelectorAll('.seg button').forEach(b => b.onclick = () => guideGreppbild(yta, d, b.dataset.mode));
+}
+
+/* ---------- metronom att prova i genomgången ---------- */
+function metronomWidget(yta) {
+  yta.innerHTML = `<div class="metro">
+    <div class="metro-slag">${[1, 2, 3, 4].map(n => `<span>${n}</span>`).join('')}</div>
+    <div class="metro-knappar">${[60, 90, 120].map(b => `<button class="metro-knapp" data-bpm="${b}">♩ = ${b}</button>`).join('')}
+      <button class="metro-knapp" data-bpm="0">■ Stopp</button></div>
+  </div>`;
+  yta.querySelectorAll('.metro-knapp').forEach(b => b.onclick = () => {
+    stoppaMetronom();
+    if (+b.dataset.bpm) startaMetronom(+b.dataset.bpm, yta);
+  });
+}
+function startaMetronom(tempo, yta) {
+  metroCtx = metroCtx || new (window.AudioContext || window.webkitAudioContext)();
+  metroCtx.resume();
+  const ctx = metroCtx, prickar = yta.querySelectorAll('.metro-slag span'), knappar = yta.querySelectorAll('.metro-knapp');
+  knappar.forEach(k => k.classList.toggle('on', +k.dataset.bpm === tempo));
+  const denna = { prickar, knappar };
+  let slag = 0, nasta = ctx.currentTime + 0.1;
+  const schemalagg = () => {
+    while (nasta < ctx.currentTime + 0.15) {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), nr = slag % 4;
+      osc.frequency.value = nr === 0 ? 1600 : 1000;
+      gain.gain.setValueAtTime(0.0001, nasta);
+      gain.gain.exponentialRampToValueAtTime(0.4, nasta + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, nasta + 0.06);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(nasta); osc.stop(nasta + 0.07);
+      setTimeout(() => { if (metro === denna) prickar.forEach((p, i) => p.classList.toggle('on', i === nr)); },
+        Math.max(0, (nasta - ctx.currentTime) * 1000));
+      nasta += 60 / tempo; slag++;
+    }
+  };
+  schemalagg();
+  denna.timer = setInterval(schemalagg, 25);
+  metro = denna;
+}
+function stoppaMetronom() {
+  if (!metro) return;
+  clearInterval(metro.timer);
+  metro.prickar.forEach(p => p.classList.remove('on'));
+  metro.knappar.forEach(k => k.classList.remove('on'));
+  metro = null;
+}
+
+/* ---------- händelser ---------- */
+$('#play').onclick = () => main.playPause();
+$('#stop').onclick = () => main.stop();
+$('#slower').onclick = () => setBpm(bpm - 5);
+$('#faster').onclick = () => setBpm(bpm + 5);
+$('#print').onclick = skrivUt;
+document.querySelectorAll('.tog').forEach(b => b.onclick = () => {
+  opts[b.dataset.opt] = !opts[b.dataset.opt];
+  store.set('opts', opts);
+  applyOpts();
+});
+$('#diag-seg').querySelectorAll('button').forEach(b => b.onclick = () => {
+  opts.diag = b.dataset.mode; store.set('opts', opts); renderDiagram();
+});
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName) && ready && !document.body.classList.contains('guidelage')) { e.preventDefault(); main.playPause(); }
+});
+// Skriv ut-knappen: rita om övningen i A4-bredd och mindre skala, vänta tills den är ritad,
+// skriv ut och återställ. (Ctrl+P går också, då skalas skärmversionen ned i beforeprint nedan.)
+function vantaPaRitning(api) {
+  return new Promise(klar => {
+    const h = () => { api.postRenderFinished.off(h); klar(); };
+    api.postRenderFinished.on(h);
+  });
+}
+async function skrivUt() {
+  const el = $('#main-at');
+  if (document.body.classList.contains('guidelage')) return window.print();
+  main.stop();
+  status('Förbereder utskrift …');
+  el.style.width = (UTSKRIFT - 30) + 'px';
+  // fyra takter per rad på papper, tre om takterna är täta (t.ex. trioler)
+  const tatast = Math.max(...main.score.tracks[0].staves[0].bars.map(b => b.voices[0].beats.length));
+  main.settings.display.barsPerRow = tatast > 8 ? 3 : 4;
+  main.settings.display.scale = main.score.masterBars.length > 10 ? 0.66 : 0.72;
+  main.updateSettings();
+  const ritad = vantaPaRitning(main);
+  main.render();
+  await ritad;
+  window.print();
+  el.style.width = '';
+  main.settings.display.barsPerRow = -1;
+  main.settings.display.scale = smal() ? 0.8 : 1;
+  main.updateSettings();
+  main.render();
+  status(ready ? 'Redo – tryck ▶ (eller mellanslag)' : 'Laddar …');
+}
+
+// alphaTab ritar i skärmbredd; skala ned noterna så att de ryms på en A4 (~700 px)
+const UTSKRIFT = 720;
+function anpassa(sel, w) { const el = $(sel); el.style.zoom = el.scrollWidth > w ? (w / el.scrollWidth).toFixed(3) : ''; }
+window.addEventListener('beforeprint', () => {
+  const bred = document.querySelector('.grid2').classList.contains('bred');
+  anpassa('#main-at', UTSKRIFT - 30);
+  anpassa('#cell-at', bred ? UTSKRIFT - 30 : UTSKRIFT / 2 - 40);
+});
+window.addEventListener('afterprint', () => { $('#main-at').style.zoom = ''; $('#cell-at').style.zoom = ''; });
+window.addEventListener('hashchange', () => visa(decodeURIComponent(location.hash.slice(1))));
+
+// sidans adress i toppen och på utskrifter, bara när domänen är inställd
+if (DATA.doman) {
+  document.querySelectorAll('.doman, .utskrift-adress').forEach(el => { el.textContent = DATA.doman; el.hidden = false; });
+  document.body.classList.add('har-doman');
+}
+
+buildNav();
+visa(decodeURIComponent(location.hash.slice(1)));
+</script>
+</body>
+</html>
