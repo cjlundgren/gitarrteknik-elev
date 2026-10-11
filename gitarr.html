@@ -54,6 +54,10 @@ button { font: inherit; color: inherit; }
 .inst-switch a { text-decoration: none; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #cfc6b8; }
 .inst-switch a.on { background: #f7f3ec; color: var(--ink); }
 .topbar .spacer { flex: 1; }
+.stod { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  color: #bfb5a6; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.stod:hover { color: #e9a07f; background: #3a352e; }
+.stod[hidden] { display: none; }
 #kortval { display: none; max-width: 100%; padding: 6px 8px; border-radius: 8px; border: 0; font: inherit; font-size: 14px; }
 
 /* ---------- layout ---------- */
@@ -259,6 +263,8 @@ body.guidelage .player { display: none; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar { display: none; }
   #kortval { display: block; flex: 1; min-width: 0; }
+  .stod span { display: none; }
+  .stod { padding: 6px 8px; }
   .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 16px; }
   .topbar .spacer { display: none; }
   .doman { display: none; }
@@ -339,6 +345,8 @@ body.pappersvy .guide-ex:has(.metro) { display: none; }
   <nav class="inst-switch" id="inst-switch"></nav>
   <div class="spacer"></div>
   <select id="kortval" aria-label="Välj övning"></select>
+  <a class="stod" id="stod" hidden target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"
+     title="Bjud på ett paket strängar"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 5 6.5 5c2 0 3.4 1.1 4.2 2.4h2.6C14.1 6.1 15.5 5 17.5 5 21.1 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z"/></svg><span>Stöd</span></a>
 </header>
 
 <div class="layout">
@@ -909,6 +917,9 @@ window.addEventListener('afterprint', () => {
   $('#main-at').style.zoom = '';
 });
 window.addEventListener('hashchange', () => visa(decodeURIComponent(location.hash.slice(1))));
+
+// stöd-länken uppe till höger, bara på den publika varianten (där donation är satt)
+if (DATA.donation) { $('#stod').href = DATA.donation.url; $('#stod').hidden = false; }
 
 // sidans adress i toppen och på utskrifter, bara när domänen är inställd
 if (DATA.doman) {
