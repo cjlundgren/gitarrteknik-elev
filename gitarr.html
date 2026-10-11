@@ -275,40 +275,57 @@ body.guidelage .player { display: none; }
 }
 
 /* ---------- utskrift ---------- */
+/* ---------- papper ----------
+   Papperslayouten (body.pappersvy) används både när Skriv ut förbereder utskriften på skärmen
+   (så att kortets höjd kan mätas mot en A4) och vid själva utskriften. Ctrl+P sätter den också. */
+.utskrift-formel { display: none; }
+body.pappersvy { background: #fff; font-size: 12px; }
+body.pappersvy .topbar, body.pappersvy .sidebar, body.pappersvy .player, body.pappersvy .prevnext,
+body.pappersvy .at-cursors, body.pappersvy .klarbox, body.pappersvy .klar-chip, body.pappersvy .guide-toc,
+body.pappersvy .guide-start, body.pappersvy .metro, body.pappersvy .p-cell,
+body.pappersvy .diagram-head .seg { display: none !important; }
+body.pappersvy .layout { display: block; }
+body.pappersvy main { padding: 0; }
+body.pappersvy .kort {
+  width: 718px; max-width: none; margin: 0;
+  display: grid; gap: 8px; align-items: start;
+  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-areas: "head head" "diagram mal" "diagram gor" "diagram var" "ovning ovning" "trappa trappa";
+}
+body.pappersvy .kort.bred-diagram {
+  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-areas: "head head head" "diagram diagram diagram" "mal gor var" "ovning ovning ovning" "trappa trappa trappa";
+}
+body.pappersvy .grid2, body.pappersvy .grid3 { display: contents; }
+body.pappersvy .kort-head { grid-area: head; gap: 12px; margin: 0; }
+body.pappersvy .p-diagram { grid-area: diagram; }
+body.pappersvy .p-mal { grid-area: mal; }
+body.pappersvy .p-gor { grid-area: gor; }
+body.pappersvy .p-var { grid-area: var; }
+body.pappersvy .ovning { grid-area: ovning; }
+body.pappersvy .p-trappa { grid-area: trappa; }
+body.pappersvy .kort-head h1 { font-size: 24px; }
+body.pappersvy .kort-id { min-width: 56px; height: 56px; font-size: 22px; border-radius: 12px; background: #fff; color: var(--ink); border: 2px solid var(--ink); }
+body.pappersvy .utskrift-formel { display: block; margin: 3px 0 0; font-family: var(--serif); font-size: 14px; }
+body.pappersvy.har-doman .utskrift-adress { display: block; margin-left: auto; align-self: flex-start; font-weight: 700; font-size: 13px; color: var(--ink); }
+body.pappersvy.har-doman .badge { margin-left: 0; }
+body.pappersvy .panel { padding: 8px 10px; break-inside: avoid; }
+body.pappersvy .panel h2 { margin-bottom: 4px; }
+body.pappersvy .p-diagram .diagram-head { margin: 0; }
+body.pappersvy #diagram svg { max-height: 175px; }
+body.pappersvy .kort.bred-diagram #diagram svg { max-height: 125px; }
+body.pappersvy .trappa label { padding: 3px 9px; background: #fff; }
+/* uppspelningsmarkörens färg ska inte följa med på papper */
+body.pappersvy .at-highlight * { fill: #000 !important; stroke: #000 !important; }
+/* alphaTab placerar notraderna absolut; låt dem flyta som vanliga block, så att höjden går att mäta
+   och en eventuell sidbrytning hamnar mellan två notrader */
+body.pappersvy .panel.ovning { break-inside: auto; }
+body.pappersvy .panel.ovning .at-surface { height: auto !important; }
+body.pappersvy .panel.ovning .at-surface > div { position: relative !important; top: auto !important; left: auto !important; break-inside: avoid; }
+body.pappersvy .guide-sek { break-inside: avoid; }
+body.pappersvy .guide-ex:has(.metro) { display: none; }
 @media print {
   @page { size: A4; margin: 10mm; }
-  body { background: #fff; font-size: 12px; }
-  .kort-head { gap: 12px; margin-bottom: 10px; }
-  body.har-doman .utskrift-adress { display: block; margin-left: auto; align-self: flex-start; font-weight: 700; font-size: 13px; color: var(--ink); }
-  body.har-doman .badge { margin-left: 0; }
-  .kort-head h1 { font-size: 24px; }
-  .kort-id { min-width: 56px; height: 56px; font-size: 22px; border-radius: 12px; }
-  .grid2 { gap: 8px; margin-bottom: 8px; }
-  .grid3 { gap: 8px; margin: 8px 0; }
-  .panel h2 { margin-bottom: 4px; }
-  .formel { font-size: 15px; }
-  #diagram svg { max-height: 150px; width: auto; }
-  .grid2.bred #diagram svg { max-height: 125px; }
-  .grid2.bred { gap: 6px; }
-  #cell-at { display: none; }
-  /* långa övningar får delas mellan notraderna i stället för att hela panelen flyttas */
-  .panel.ovning { break-inside: auto; }
-  /* alphaTab placerar notraderna absolut; låt dem flyta som vanliga block så att sidbrytningen
-     hamnar mellan två notrader i stället för mitt i (eller ovanpå) en */
-  .panel.ovning .at-surface { height: auto !important; }
-  .panel.ovning .at-surface > div { position: relative !important; top: auto !important; left: auto !important; break-inside: avoid; }
-  .trappa label { padding: 3px 9px; }
-  .topbar, .sidebar, .player, .seg, .prevnext, .at-cursors, .klarbox, .klar-chip, .guide-toc, .guide-start, .metro { display: none !important; }
-  .guide-sek { break-inside: avoid; }
-  .guide-ex:has(.metro) { display: none; }
-  .layout { display: block; }
-  main { padding: 0; }
-  .panel { break-inside: avoid; padding: 8px 10px; }
-  .grid2 { grid-template-columns: 1fr 1fr; }
-  .grid2.bred { grid-template-columns: 1fr; }
-  .grid3 { grid-template-columns: 1fr 1.3fr 1fr; }
-  .kort-id { background: #fff; color: var(--ink); border: 2px solid var(--ink); }
-  .trappa label { background: #fff; }
 }
 </style>
 </head>
@@ -333,6 +350,7 @@ body.guidelage .player { display: none; }
         <div>
           <div class="kap" id="k-kap"></div>
           <h1 id="k-titel"></h1>
+          <p class="utskrift-formel" id="k-formel-p"></p>
         </div>
         <span class="badge" id="k-block"></span>
         <span class="klar-chip" id="k-klarchip" hidden>✓ Klar</span>
@@ -340,12 +358,12 @@ body.guidelage .player { display: none; }
       </div>
 
       <section class="grid2">
-        <div class="panel">
+        <div class="panel p-cell">
           <h2>Cellen</h2>
           <p class="formel" id="k-formel"></p>
           <div class="at-wrap" id="cell-at"></div>
         </div>
-        <div class="panel">
+        <div class="panel p-diagram">
           <div class="diagram-head">
             <h2>Greppbild</h2>
             <div class="seg" id="diag-seg">
@@ -364,12 +382,12 @@ body.guidelage .player { display: none; }
       </section>
 
       <section class="grid3">
-        <div class="panel"><h2>Mål</h2><p id="k-mal"></p></div>
-        <div class="panel"><h2>Så gör du</h2><p id="k-gor"></p></div>
-        <div class="panel"><h2>Variationer</h2><ul id="k-var"></ul></div>
+        <div class="panel p-mal"><h2>Mål</h2><p id="k-mal"></p></div>
+        <div class="panel p-gor"><h2>Så gör du</h2><p id="k-gor"></p></div>
+        <div class="panel p-var"><h2>Variationer</h2><ul id="k-var"></ul></div>
       </section>
 
-      <section class="panel">
+      <section class="panel p-trappa">
         <h2>Tempotrappa – kryssa när det sitter</h2>
         <div class="trappa" id="k-trappa"></div>
       </section>
@@ -620,6 +638,7 @@ function showCard(id) {
   $('#k-kap').textContent = `${DATA.titel} · Kapitel ${k.kap} · ${DATA.kapitel[k.kap].titel}`;
   const blk = $('#k-block'); blk.textContent = k.block; blk.className = 'badge b' + blockkod(k);
   $('#k-formel').textContent = k.formel;
+  $('#k-formel-p').textContent = k.formel;
   $('#k-mal').textContent = k.mal;
   $('#k-gor').textContent = k.gor;
   $('#k-var').innerHTML = k.variationer.map(v => `<li>${v}</li>`).join('');
@@ -674,6 +693,7 @@ function renderDiagram() {
     ? '<p class="diagram-not"><span class="ny-prick"></span>blå = nya toner</p>' : '');
   // breda greppbilder (t.ex. formkedjan) får en egen rad
   document.querySelector('.grid2').classList.toggle('bred', n > 8);
+  $('#kortvy').classList.toggle('bred-diagram', n > 8);
 }
 
 function greppbildSvg(d, mode) {
@@ -826,46 +846,62 @@ $('#diag-seg').querySelectorAll('button').forEach(b => b.onclick = () => {
 document.addEventListener('keydown', e => {
   if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName) && ready && !document.body.classList.contains('guidelage')) { e.preventDefault(); main.playPause(); }
 });
-// Skriv ut-knappen: rita om övningen i A4-bredd och mindre skala, vänta tills den är ritad,
-// skriv ut och återställ. (Ctrl+P går också, då skalas skärmversionen ned i beforeprint nedan.)
+// Skriv ut-knappen: lägg kortet i papperslayouten, rita om övningen i A4-bredd och prova allt
+// mindre noter (fler takter per rad) tills hela kortet ryms på en A4. Skriv sedan ut och återställ.
+// Ctrl+P går också (papperslayouten sätts i beforeprint), men utan anpassningen.
+const PAPPER_BREDD = 718;  // A4 210 mm minus 2 × 10 mm marginal, i CSS-pixlar
+const PAPPER_HOJD = 1035;  // A4 297 mm minus marginaler (≈ 1047 px) och lite luft
 function vantaPaRitning(api) {
   return new Promise(klar => {
     const h = () => { api.postRenderFinished.off(h); klar(); };
     api.postRenderFinished.on(h);
   });
 }
+async function ritaFor(api, radlangd, skala) {
+  api.settings.display.barsPerRow = radlangd;
+  api.settings.display.scale = skala;
+  api.updateSettings();
+  const ritad = vantaPaRitning(api);
+  api.render();
+  await ritad;
+}
+let utskriftForberedd = false;
 async function skrivUt() {
-  const el = $('#main-at');
   if (document.body.classList.contains('guidelage')) return window.print();
+  const el = $('#main-at');
   main.stop();
   status('Förbereder utskrift …');
-  el.style.width = (UTSKRIFT - 30) + 'px';
-  // fyra takter per rad på papper, tre om takterna är täta (t.ex. trioler)
+  utskriftForberedd = true;
+  document.body.classList.add('pappersvy');
+  el.style.width = (PAPPER_BREDD - 22) + 'px';
   const tatast = Math.max(...main.score.tracks[0].staves[0].bars.map(b => b.voices[0].beats.length));
-  main.settings.display.barsPerRow = tatast > 8 ? 3 : 4;
-  main.settings.display.scale = main.score.masterBars.length > 10 ? 0.66 : 0.72;
-  main.updateSettings();
-  const ritad = vantaPaRitning(main);
-  main.render();
-  await ritad;
+  const forsok = tatast > 8
+    ? [[3, 0.72], [3, 0.64], [4, 0.6], [4, 0.54], [5, 0.5], [6, 0.46]]
+    : [[4, 0.72], [4, 0.64], [5, 0.6], [6, 0.56], [6, 0.5], [8, 0.46]];
+  for (const [radlangd, skala] of forsok) {
+    await ritaFor(main, radlangd, skala);
+    if ($('#kortvy').offsetHeight <= PAPPER_HOJD) break;
+  }
   window.print();
+  document.body.classList.remove('pappersvy');
+  utskriftForberedd = false;
   el.style.width = '';
-  main.settings.display.barsPerRow = -1;
-  main.settings.display.scale = smal() ? 0.8 : 1;
-  main.updateSettings();
-  main.render();
+  await ritaFor(main, -1, smal() ? 0.8 : 1);
   status(ready ? 'Redo – tryck ▶ (eller mellanslag)' : 'Laddar …');
 }
 
-// alphaTab ritar i skärmbredd; skala ned noterna så att de ryms på en A4 (~700 px)
-const UTSKRIFT = 720;
+// Ctrl+P utan knappen: papperslayout, och skala ned skärmversionen av noterna så att de ryms
 function anpassa(sel, w) { const el = $(sel); el.style.zoom = el.scrollWidth > w ? (w / el.scrollWidth).toFixed(3) : ''; }
 window.addEventListener('beforeprint', () => {
-  const bred = document.querySelector('.grid2').classList.contains('bred');
-  anpassa('#main-at', UTSKRIFT - 30);
-  anpassa('#cell-at', bred ? UTSKRIFT - 30 : UTSKRIFT / 2 - 40);
+  if (utskriftForberedd) return;
+  document.body.classList.add('pappersvy');
+  anpassa('#main-at', PAPPER_BREDD - 22);
 });
-window.addEventListener('afterprint', () => { $('#main-at').style.zoom = ''; $('#cell-at').style.zoom = ''; });
+window.addEventListener('afterprint', () => {
+  if (utskriftForberedd) return;
+  document.body.classList.remove('pappersvy');
+  $('#main-at').style.zoom = '';
+});
 window.addEventListener('hashchange', () => visa(decodeURIComponent(location.hash.slice(1))));
 
 // sidans adress i toppen och på utskrifter, bara när domänen är inställd
