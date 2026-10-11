@@ -46,9 +46,12 @@ h1 { margin: 0 0 10px; font-family: var(--serif); font-size: clamp(32px, 6vw, 48
 .info { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 .info p { margin: 0 0 8px; }
 .info a { color: inherit; }
-.donation { margin: 28px 0 0; padding: 16px 18px; border-radius: 14px; background: #fff; border: 1px dashed var(--line); color: var(--muted); }
-.donation a { color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap; }
-.donation a:hover { text-decoration: underline; }
+.donation { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1px dashed var(--line); color: var(--muted); }
+.donation-ikon { flex: none; display: inline-flex; color: #d9cfbf; }
+.donation-text { flex: 1; min-width: 200px; }
+.donation-knapp { flex: none; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.donation-knapp:hover { filter: brightness(1.12); }
+.donation { margin: 28px 0 0; padding: 16px 18px; border-radius: 14px; background: #fff; }
 </style>
 </head>
 <body>

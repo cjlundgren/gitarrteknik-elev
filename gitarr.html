@@ -175,9 +175,12 @@ body.guidelage .player { display: none; }
 .guide-start { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 30px; }
 .guide-start .klar-nasta { padding: 14px 22px; }
 .guide-start .klar-nasta.alt { background: var(--ink); }
-.donation { margin: 0 0 30px; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--line); color: var(--muted); font-size: 14px; }
-.donation a { color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap; }
-.donation a:hover { text-decoration: underline; }
+.donation { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1px dashed var(--line); color: var(--muted); }
+.donation-ikon { flex: none; display: inline-flex; color: #d9cfbf; }
+.donation-text { flex: 1; min-width: 200px; }
+.donation-knapp { flex: none; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.donation-knapp:hover { filter: brightness(1.12); }
+.guide .donation { margin: 0 0 30px; padding: 14px 16px; border-radius: 12px; font-size: 14px; }
 .metro-slag { display: flex; gap: 12px; margin-bottom: 12px; }
 .metro-slag span { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: #fff; display: grid; place-items: center; font-weight: 700; color: var(--muted); }
 .metro-slag span.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -345,7 +348,7 @@ body.pappersvy .guide-ex:has(.metro) { display: none; }
   <div class="spacer"></div>
   <select id="kortval" aria-label="Välj övning"></select>
   <a class="stod" id="stod" hidden target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"
-     title="Bjud på ett paket strängar"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 22.5C8 18.5 2.5 12.5 2.5 7.6 2.5 4.3 6.7 2 12 2s9.5 2.3 9.5 5.6c0 4.9-5.5 10.9-9.5 14.9zM12 14.6c-2.6-2-4.3-3.5-4.3-5.3 0-1.3 1-2.3 2.2-2.3.9 0 1.6.5 2.1 1.3.5-.8 1.2-1.3 2.1-1.3 1.2 0 2.2 1 2.2 2.3 0 1.8-1.7 3.3-4.3 5.3z"/></svg><span>Stöd</span></a>
+     title="Bjud på ett paket strängar"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 22.5C8 18.5 2.5 12.5 2.5 7.6 2.5 4.3 6.7 2 12 2s9.5 2.3 9.5 5.6c0 4.9-5.5 10.9-9.5 14.9z"/><path fill="#e5484d" d="M12 14.6c-2.6-2-4.3-3.5-4.3-5.3 0-1.3 1-2.3 2.2-2.3.9 0 1.6.5 2.1 1.3.5-.8 1.2-1.3 2.1-1.3 1.2 0 2.2 1 2.2 2.3 0 1.8-1.7 3.3-4.3 5.3z"/></svg><span>Stöd</span></a>
 </header>
 
 <div class="layout">
@@ -774,8 +777,10 @@ function byggGuide() {
       <a class="klar-nasta" href="#${kort[0].id}">Aldrig spelat? Börja på ${kort[0].id} →</a>
       <a class="klar-nasta alt" href="#${forstaOvning.id}">Spelat lite? Börja på ${forstaOvning.id} →</a>
     </div>
-    ${DATA.donation ? `<p class="donation">Gillar du korten? Bjud mig gärna på ett paket strängar, så fortsätter jag göra fler kapitel. <a href="${DATA.donation.url}" target="_blank"
-      rel="noopener noreferrer" referrerpolicy="no-referrer">Bjud mig på strängar →</a></p>` : ''}`;
+    ${DATA.donation ? `<div class="donation"><span class="donation-ikon"><svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M12 22.5C8 18.5 2.5 12.5 2.5 7.6 2.5 4.3 6.7 2 12 2s9.5 2.3 9.5 5.6c0 4.9-5.5 10.9-9.5 14.9z"/><path fill="#e5484d" d="M12 14.6c-2.6-2-4.3-3.5-4.3-5.3 0-1.3 1-2.3 2.2-2.3.9 0 1.6.5 2.1 1.3.5-.8 1.2-1.3 2.1-1.3 1.2 0 2.2 1 2.2 2.3 0 1.8-1.7 3.3-4.3 5.3z"/></svg></span>
+      <span class="donation-text">Gillar du korten? Bjud mig gärna på ett paket strängar, så fortsätter jag göra fler kapitel.</span>
+      <a class="donation-knapp" href="${DATA.donation.url}" target="_blank" rel="noopener noreferrer"
+         referrerpolicy="no-referrer">Bjud mig på strängar →</a></div>` : ''}`;
   $('#guide').querySelectorAll('.guide-toc button').forEach(b => b.onclick = () =>
     document.getElementById(b.dataset.mal).scrollIntoView({ behavior: 'smooth', block: 'start' }));
   $('#guide').querySelectorAll('.guide-ex').forEach(fig => {
