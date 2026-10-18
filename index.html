@@ -8,6 +8,22 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%23b0502a%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2219%22 font-family=%22Georgia,serif%22 font-weight=%22700%22 text-anchor=%22middle%22 fill=%22white%22%3ET%3C/text%3E%3C/svg%3E">
 <title>Gitarrteknik – övningar för gitarr och elbas</title>
+<meta name="color-scheme" content="light dark">
+<!-- eget mörkt läge: Dark Reader och liknande ska inte färga om sidan ovanpå -->
+<meta name="darkreader-lock">
+<script>
+(function () {
+  var val = 'auto', mork = matchMedia('(prefers-color-scheme: dark)');
+  try { val = JSON.parse(localStorage.getItem('tk:tema')) || 'auto'; } catch (e) {}
+  function satt() { document.documentElement.classList.toggle('mork', val === 'mork' || (val === 'auto' && mork.matches)); }
+  satt();
+  mork.addEventListener('change', satt);
+  window.tema = {
+    ar: function () { return document.documentElement.classList.contains('mork'); },
+    byt: function () { val = this.ar() ? 'ljus' : 'mork'; try { localStorage.setItem('tk:tema', JSON.stringify(val)); } catch (e) {} satt(); },
+  };
+})();
+</script>
 <meta name="description" content="Korta teknikövningar för gitarr och elbas, med noter, tabb, greppbilder och uppspelning.">
 <style>
 @font-face { font-family: "Fraunces"; src: url("lib/fonts/fraunces.woff2") format("woff2"); font-weight: 500 700; font-display: swap; }
@@ -19,19 +35,39 @@
   --ink: #1f1c18;
   --muted: #6f675c;
   --line: #e4dccf;
+  --line-strong: #d9cfbf;
   --accent: #b0502a;
+  --bar: #1f1c18; --bar-2: #3a352e; --bar-text: #f7f3ec; --bar-dov: #bfb5a6;
+}
+/* mörkt läge, samma värden som på övningssidorna */
+:root.mork {
+  color-scheme: dark;
+  --paper: #16171a;
+  --card: #202226;
+  --ink: #ebe7e0;
+  --muted: #a49e94;
+  --line: #33363c;
+  --line-strong: #4b4f57;
+  --accent: #c8623a;
+  --bar: #0d0e10; --bar-2: #2a2d32; --bar-text: #ebe7e0; --bar-dov: #a7a39b;
+}
+:root {
   --serif: "Fraunces", Georgia, serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--ink); color: #f7f3ec; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--bar); color: var(--bar-text); }
 .stod { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
-  color: #bfb5a6; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
-.stod:hover { color: #e9a07f; background: #3a352e; }
+  color: var(--bar-dov); font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.stod:hover { color: #e9a07f; background: var(--bar-2); }
 .stod[hidden] { display: none; }
 @media (max-width: 600px) { .stod { padding: 5px 8px; } }
+.topp-hoger { display: flex; align-items: center; gap: 4px; }
+.tema { flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--bar-dov); cursor: pointer; }
+.tema:hover { background: var(--bar-2); color: var(--bar-text); }
+.tema svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .brand { font-family: var(--serif); font-weight: 700; font-size: 19px; }
 .brand span { color: #e9a07f; }
 main { max-width: 860px; margin: 0 auto; padding: 48px 16px 32px; }
@@ -50,15 +86,15 @@ h1 { margin: 0 0 10px; font-family: var(--serif); font-size: clamp(32px, 6vw, 48
 .info p { margin: 0 0 8px; }
 .info a { color: inherit; }
 .donation { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1px dashed var(--line); color: var(--muted); }
-.donation-ikon { flex: none; display: inline-flex; color: #d9cfbf; }
+.donation-ikon { flex: none; display: inline-flex; color: var(--line-strong); }
 .donation-text { flex: 1; min-width: 200px; }
 .donation-knapp { flex: none; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .donation-knapp:hover { filter: brightness(1.12); }
-.donation { margin: 28px 0 0; padding: 16px 18px; border-radius: 14px; background: #fff; }
+.donation { margin: 28px 0 0; padding: 16px 18px; border-radius: 14px; background: var(--card); }
 </style>
 </head>
 <body>
-<header class="topbar"><div class="brand">Gitarr<span>teknik</span></div></header>
+<header class="topbar"><div class="brand">Gitarr<span>teknik</span></div><span class="topp-hoger"><button class="tema" id="tema" type="button"></button></span></header>
 <main>
   <h1>Teknikövningar för gitarr och elbas</h1>
   <p class="ingress">Korta övningar som bygger på varandra, en i taget. Med noter, tabb, greppbilder
@@ -89,5 +125,19 @@ h1 { margin: 0 0 10px; font-family: var(--serif); font-size: clamp(32px, 6vw, 48
       <a href="lib/fonts/Fraunces-OFL.txt">Fraunces</a> och <a href="lib/fonts/Inter-OFL.txt">Inter</a> (SIL OFL).</p>
   </section>
 </main>
+<script>
+// ljust/mörkt läge: knappen visar det läge man byter till
+const MANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+function visaTema() {
+  const b = document.getElementById('tema'), m = tema.ar();
+  b.innerHTML = m ? SOL : MANE;
+  b.title = m ? 'Ljust läge' : 'Mörkt läge';
+  b.setAttribute('aria-label', b.title);
+}
+document.getElementById('tema').onclick = () => { tema.byt(); visaTema(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(visaTema));
+visaTema();
+</script>
 </body>
 </html>
