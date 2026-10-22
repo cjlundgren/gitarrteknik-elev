@@ -55,7 +55,9 @@
   --serif: "Fraunces", Georgia, serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-* { box-sizing: border-box; }
+/* snabba tryck (metronom, tempo, spelaren) ska inte tolkas som dubbeltryck-zoom på mobilen;
+   zoom med två fingrar fungerar som vanligt */
+* { box-sizing: border-box; touch-action: manipulation; }
 html, body { margin: 0; }
 body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--bar); color: var(--bar-text); }
