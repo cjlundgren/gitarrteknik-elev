@@ -405,7 +405,10 @@ body.pappersvy .at-surface { filter: none; }
   main { padding: 18px 16px 0; }
   .player { margin: 0 -16px; padding: 10px 16px; }
   .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
-  #chips, #print { display: none; }
+  #print { display: none; }
+  /* tempotrappans steg som en egen rad med stora knappar, så att man slipper trycka − och + många gånger */
+  #chips { flex-basis: 100%; display: flex; gap: 6px; margin-top: 2px; }
+  .chip { flex: 1 1 0; min-width: 0; padding: 8px 0; font-size: 14px; }
   .player-inner { gap: 8px 10px; }
   .pbtn.play { width: 42px; height: 42px; }
   .kort-head { gap: 12px; flex-wrap: wrap; }
